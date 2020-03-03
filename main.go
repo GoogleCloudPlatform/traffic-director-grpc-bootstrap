@@ -65,24 +65,30 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
 		os.Exit(1)
 	}
+	var output *os.File
 	if *outputName == "-" {
-		_, err = os.Stdout.Write(config)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to write config: %s\n", err)
-			os.Exit(1)
-		}
-		_, err = os.Stdout.WriteString("\n")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to write config: %s\n", err)
-			os.Exit(1)
-		}
+		output = os.Stdout
 	} else {
-		// Let umask filter file permissions
-		err = ioutil.WriteFile(*outputName, config, 0777)
+		output, err = os.Create(*outputName)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to write config: %s\n", err)
+			fmt.Fprintf(os.Stderr, "Failed to open output file: %s\n", err)
 			os.Exit(1)
 		}
+	}
+	_, err = output.Write(config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write config: %s\n", err)
+		os.Exit(1)
+	}
+	_, err = output.Write([]byte("\n"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write config: %s\n", err)
+		os.Exit(1)
+	}
+	err = output.Close()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to close config: %s\n", err)
+		os.Exit(1)
 	}
 }
 
