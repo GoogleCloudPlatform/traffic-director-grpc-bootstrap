@@ -1,4 +1,4 @@
-# GCP gRPC Bootstrap
+# Traffic Director gRPC Bootstrap
 
 This repository contains sources to generate a bootstrap file for the XDS
 functionality in gRPC when using GCP and Traffic Director as your control plane.

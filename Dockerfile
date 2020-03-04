@@ -13,5 +13,5 @@
 # limitations under the License.
 
 FROM scratch
-COPY gcp-grpc-bootstrap ./
-ENTRYPOINT ["/gcp-grpc-bootstrap"]
+COPY td-grpc-bootstrap ./
+ENTRYPOINT ["/td-grpc-bootstrap"]

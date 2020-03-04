@@ -1,4 +1,4 @@
-module gcp-grpc-bootstrap
+module td-grpc-bootstrap
 
 go 1.13
 
