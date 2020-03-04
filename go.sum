@@ -1,6 +1,2 @@
-github.com/google/addlicense v0.0.0-20200222194535-20ee99ff6ab8 h1:Vc+6MlKcJqzJ0PxSdbh1cbJixkxEF6vBOM0f1Hxmyfw=
-github.com/google/addlicense v0.0.0-20200222194535-20ee99ff6ab8/go.mod h1:EMjYTRimagHs1FwlIqKyX3wAM0u3rA+McvlIIWmSamA=
 github.com/google/uuid v1.1.1 h1:Gkbcsh/GbpXz7lPftLA3P6TYMwjCLYm83jiFQZF/3gY=
 github.com/google/uuid v1.1.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e h1:vcxGaoTs7kV8m5Np9uUNQin4BrLOthgV7252N8V+FwY=
-golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
