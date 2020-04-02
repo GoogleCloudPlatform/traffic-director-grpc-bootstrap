@@ -30,6 +30,7 @@ import (
 	"github.com/google/uuid"
 )
 
+var xdsServerUri = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
 var outputName = flag.String("output", "-", "output file name")
 var gcpProjectNumber = flag.Int64("gcp-project-number", 0,
 	"the gcp project number. If unknown, can be found via 'gcloud projects list'")
@@ -56,6 +57,7 @@ func main() {
 		zone = ""
 	}
 	config, err := generate(configInput{
+		xdsServerUri:     *xdsServerUri,
 		gcpProjectNumber: *gcpProjectNumber,
 		vpcNetworkName:   *vpcNetworkName,
 		ip:               ip,
@@ -93,6 +95,7 @@ func main() {
 }
 
 type configInput struct {
+	xdsServerUri     string
 	gcpProjectNumber int64
 	vpcNetworkName   string
 	ip               string
@@ -103,7 +106,7 @@ func generate(in configInput) ([]byte, error) {
 	c := &config{
 		XdsServers: []server{
 			{
-				ServerUri: "trafficdirector.googleapis.com:443",
+				ServerUri: in.xdsServerUri,
 				ChannelCreds: []creds{
 					{Type: "google_default"},
 				},
