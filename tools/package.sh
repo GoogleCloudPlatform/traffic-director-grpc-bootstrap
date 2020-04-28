@@ -23,7 +23,7 @@ if [[ $# -ne 1 ]]; then
 fi
 
 version="$1"
-mkdir td-grpc-bootstrap-${version}/
-cp td-grpc-bootstrap td-grpc-bootstrap-${version}/
-tar czf td-grpc-bootstrap-${version}.tar.gz td-grpc-bootstrap-${version}/
-rm -r td-grpc-bootstrap-${version}/
+mkdir "td-grpc-bootstrap-${version}/"
+cp td-grpc-bootstrap "td-grpc-bootstrap-${version}/"
+tar czf "td-grpc-bootstrap-${version}.tar.gz" "td-grpc-bootstrap-${version}/"
+rm -r "td-grpc-bootstrap-${version}/"
