@@ -16,12 +16,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 )
 
@@ -62,7 +64,15 @@ func TestGenerate(t *testing.T) {
 		t.Fatalf("want no error, got: %v", err)
 	}
 	if want != string(got) {
-		t.Fatalf("\nwant:\n%v\n----------------\ngot:\n%v",
+		var wantParsed, gotParsed interface{}
+		err1 := json.Unmarshal([]byte(want), &wantParsed)
+		err2 := json.Unmarshal(got, &gotParsed)
+		if err1 != nil || err2 != nil {
+			t.Logf("problem parsing json, error for want: %v, got: %v", err1, err2)
+		} else if diff := cmp.Diff(wantParsed, gotParsed); diff != "" {
+			t.Fatalf("not equal (-want +got):\n%s", diff)
+		}
+		t.Fatalf("not equal, but structure matched\nwant:\n%v\n----------------\ngot:\n%v",
 			want, string(got))
 	}
 }
