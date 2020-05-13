@@ -34,7 +34,7 @@ func TestGenerate(t *testing.T) {
 		ip:               "10.9.8.7",
 		zone:             "uscentral-5",
 	}
-	expected := `{
+	want := `{
   "xds_servers": [
     {
       "server_uri": "example.com:443",
@@ -57,21 +57,21 @@ func TestGenerate(t *testing.T) {
     }
   }
 }`
-	out, err := generate(in)
+	got, err := generate(in)
 	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
+		t.Fatalf("want no error, got: %v", err)
 	}
-	if expected != string(out) {
-		t.Fatalf("\nexpected:\n%v\n----------------\ngot:\n%v",
-			expected, string(out))
+	if want != string(got) {
+		t.Fatalf("\nwant:\n%v\n----------------\ngot:\n%v",
+			want, string(got))
 	}
 }
 
 func TestGetZone(t *testing.T) {
 	server := httptest.NewServer(nil)
 	defer server.Close()
-	overrideHttp(server)
-	expected := "us-central5-c"
+	overrideHTTP(server)
+	want := "us-central5-c"
 	http.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/zone",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("Metadata-Flavor") != "Google" {
@@ -80,20 +80,20 @@ func TestGetZone(t *testing.T) {
 			}
 			w.Write([]byte("projects/123456789012345/zones/us-central5-c"))
 		})
-	actual, err := getZone()
+	got, err := getZone()
 	if err != nil {
-		t.Fatalf("expected no error, got :%v", err)
+		t.Fatalf("want no error, got :%v", err)
 	}
-	if expected != actual {
-		t.Fatalf("expected %v, got: %v", expected, actual)
+	if want != got {
+		t.Fatalf("want %v, got: %v", want, got)
 	}
 }
 
 func TestGetProjectId(t *testing.T) {
 	server := httptest.NewServer(nil)
 	defer server.Close()
-	overrideHttp(server)
-	expected := int64(123456789012345)
+	overrideHTTP(server)
+	want := int64(123456789012345)
 	http.HandleFunc("metadata.google.internal/computeMetadata/v1/project/numeric-project-id",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("Metadata-Flavor") != "Google" {
@@ -102,16 +102,16 @@ func TestGetProjectId(t *testing.T) {
 			}
 			w.Write([]byte("123456789012345"))
 		})
-	actual, err := getProjectId()
+	got, err := getProjectId()
 	if err != nil {
-		t.Fatalf("expected no error, got :%v", err)
+		t.Fatalf("want no error, got :%v", err)
 	}
-	if expected != actual {
-		t.Fatalf("expected %v, got: %v", expected, actual)
+	if want != got {
+		t.Fatalf("want %v, got: %v", want, got)
 	}
 }
 
-func overrideHttp(s *httptest.Server) {
+func overrideHTTP(s *httptest.Server) {
 	http.DefaultTransport = &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			return (&net.Dialer{}).DialContext(ctx, "tcp", s.Listener.Addr().String())
