@@ -36,6 +36,20 @@ var gcpProjectNumber = flag.Int64("gcp-project-number", 0,
 	"the gcp project number. If unknown, can be found via 'gcloud projects list'")
 var vpcNetworkName = flag.String("vpc-network-name", "default", "VPC network name")
 
+const (
+	privateSPIFFECertProviderInstanceName = "google_cloud_private_spiffe"
+	privateSPIFFECertProviderName         = "file_watcher"
+	privateSPIFFECertificateFile          = "/var/run/gke-spiffe/certs/certificates.pem"
+	privateSPIFFEKeyFile                  = "/var/run/gke-spiffe/certs/private_key.pem"
+	privateSPIFFECAFile                   = "/var/run/gke-spiffe/certs/ca_certificates.pem"
+	// The file_watcher plugin will parse this a Duration proto, but it is totally
+	// fine to just emit a string here.
+	privateSPIFFERefreshInterval = "10m"
+)
+
+// For overriding in unit tests.
+var newUUIDString = func() string { return uuid.New().String() }
+
 func main() {
 	flag.Parse()
 	if *gcpProjectNumber == 0 {
@@ -113,7 +127,7 @@ func generate(in configInput) ([]byte, error) {
 			},
 		},
 		Node: &node{
-			Id:      uuid.New().String() + "~" + in.ip,
+			Id:      newUUIDString() + "~" + in.ip,
 			Cluster: "cluster", // unused by TD
 			Locality: &locality{
 				Zone: in.zone,
@@ -121,6 +135,17 @@ func generate(in configInput) ([]byte, error) {
 			Metadata: map[string]string{
 				"TRAFFICDIRECTOR_NETWORK_NAME":       in.vpcNetworkName,
 				"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": strconv.FormatInt(in.gcpProjectNumber, 10),
+			},
+		},
+		CertificateProviders: map[string]certificateProviderConfig{
+			privateSPIFFECertProviderInstanceName: {
+				PluginName: privateSPIFFECertProviderName,
+				Config: privateSPIFFEConfig{
+					CertificateFile:   privateSPIFFECertificateFile,
+					PrivateKeyFile:    privateSPIFFEKeyFile,
+					CACertificateFile: privateSPIFFECAFile,
+					RefreshInterval:   privateSPIFFERefreshInterval,
+				},
 			},
 		},
 	}
@@ -194,8 +219,9 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 }
 
 type config struct {
-	XdsServers []server `json:"xds_servers,omitempty"`
-	Node       *node    `json:"node,omitempty"`
+	XdsServers           []server                             `json:"xds_servers,omitempty"`
+	Node                 *node                                `json:"node,omitempty"`
+	CertificateProviders map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
 }
 
 type server struct {
@@ -220,4 +246,16 @@ type locality struct {
 	Region  string `json:"region,omitempty"`
 	Zone    string `json:"zone,omitempty"`
 	SubZone string `json:"sub_zone,omitempty"`
+}
+
+type certificateProviderConfig struct {
+	PluginName string      `json:"plugin_name,omitempty"`
+	Config     interface{} `json:"config,omitempty"`
+}
+
+type privateSPIFFEConfig struct {
+	CertificateFile   string `json:"certificate_file,omitempty"`
+	PrivateKeyFile    string `json:"private_key_file,omitempty"`
+	CACertificateFile string `json:"ca_certificate_file,omitempty"`
+	RefreshInterval   string `json:"refresh_interval,omitempty"`
 }

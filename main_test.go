@@ -17,66 +17,74 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/uuid"
 )
 
-func TestGenerate(t *testing.T) {
-	uuid.SetRand(rand.New(rand.NewSource(1)))
-	in := configInput{
-		xdsServerUri:     "example.com:443",
-		gcpProjectNumber: 123456789012345,
-		vpcNetworkName:   "thedefault",
-		ip:               "10.9.8.7",
-		zone:             "uscentral-5",
+func TestGenerate2(t *testing.T) {
+	origUUIString := newUUIDString
+	newUUIDString = func() string { return "dummy-uuid" }
+	defer func() { newUUIDString = origUUIString }()
+
+	input := configInput{
+		xdsServerUri:     "dummy-server",
+		gcpProjectNumber: 666,
+		vpcNetworkName:   "vpc-network-name",
+		ip:               "1.2.3.4",
+		zone:             "us-west1a",
 	}
-	want := `{
-  "xds_servers": [
-    {
-      "server_uri": "example.com:443",
-      "channel_creds": [
-        {
-          "type": "google_default"
-        }
-      ]
-    }
-  ],
-  "node": {
-    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
-    "cluster": "cluster",
-    "metadata": {
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
-    },
-    "locality": {
-      "zone": "uscentral-5"
-    }
-  }
-}`
-	got, err := generate(in)
+
+	// This is much easier than specifying the expected JSON config as a string
+	// here since we have to be accurate with whitespace.
+	wantConfig := config{
+		XdsServers: []server{
+			{
+				ServerUri: "dummy-server",
+				ChannelCreds: []creds{
+					{
+						Type: "google_default",
+					},
+				},
+			},
+		},
+		Node: &node{
+			Id:       "dummy-uuid~1.2.3.4",
+			Cluster:  "cluster",
+			Locality: &locality{Zone: "us-west1a"},
+			Metadata: map[string]string{
+				"TRAFFICDIRECTOR_NETWORK_NAME":       "vpc-network-name",
+				"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "666",
+			},
+		},
+		CertificateProviders: map[string]certificateProviderConfig{
+			"google_cloud_private_spiffe": {
+				PluginName: "file_watcher",
+				Config: privateSPIFFEConfig{
+					CertificateFile:   "/var/run/gke-spiffe/certs/certificates.pem",
+					PrivateKeyFile:    "/var/run/gke-spiffe/certs/private_key.pem",
+					CACertificateFile: "/var/run/gke-spiffe/certs/ca_certificates.pem",
+					RefreshInterval:   "10m",
+				},
+			},
+		},
+	}
+	wantOutput, err := json.MarshalIndent(wantConfig, "", "  ")
 	if err != nil {
-		t.Fatalf("want no error, got: %v", err)
+		t.Fatalf("json.MarshalIndent(%+v) failed: %v", wantConfig, err)
 	}
-	if want != string(got) {
-		var wantParsed, gotParsed interface{}
-		err1 := json.Unmarshal([]byte(want), &wantParsed)
-		err2 := json.Unmarshal(got, &gotParsed)
-		if err1 != nil || err2 != nil {
-			t.Logf("problem parsing json, error for want: %v, got: %v", err1, err2)
-		} else if diff := cmp.Diff(wantParsed, gotParsed); diff != "" {
-			t.Fatalf("not equal (-want +got):\n%s", diff)
-		}
-		t.Fatalf("not equal, but structure matched\nwant:\n%v\n----------------\ngot:\n%v",
-			want, string(got))
+
+	gotOutput, err := generate(input)
+	if err != nil {
+		t.Fatalf("generate(%+v) failed: %v", input, err)
+	}
+	if diff := cmp.Diff(string(wantOutput), string(gotOutput)); diff != "" {
+		t.Fatalf("generate(%+v) returned output does not match expected (-want +got):\n%s", input, diff)
 	}
 }
-
 func TestGetZone(t *testing.T) {
 	server := httptest.NewServer(nil)
 	defer server.Close()
