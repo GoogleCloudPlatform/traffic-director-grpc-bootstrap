@@ -30,59 +30,104 @@ func TestGenerate2(t *testing.T) {
 	newUUIDString = func() string { return "dummy-uuid" }
 	defer func() { newUUIDString = origUUIString }()
 
-	input := configInput{
-		xdsServerUri:     "dummy-server",
-		gcpProjectNumber: 666,
-		vpcNetworkName:   "vpc-network-name",
-		ip:               "1.2.3.4",
-		zone:             "us-west1a",
-	}
-
-	// This is much easier than specifying the expected JSON config as a string
-	// here since we have to be accurate with whitespace.
-	wantConfig := config{
-		XdsServers: []server{
-			{
-				ServerUri: "dummy-server",
-				ChannelCreds: []creds{
+	tests := []struct {
+		desc  string
+		input configInput
+		// This is much easier than specifying the expected JSON config as a string
+		// here since we have to be accurate with whitespace.
+		output config
+	}{
+		{
+			desc: "happy case without file watcher config",
+			input: configInput{
+				xdsServerUri:     "dummy-server",
+				gcpProjectNumber: 666,
+				vpcNetworkName:   "vpc-network-name",
+				ip:               "1.2.3.4",
+				zone:             "us-west1a",
+			},
+			output: config{
+				XdsServers: []server{
 					{
-						Type: "google_default",
+						ServerUri: "dummy-server",
+						ChannelCreds: []creds{
+							{
+								Type: "google_default",
+							},
+						},
+					},
+				},
+				Node: &node{
+					Id:       "dummy-uuid~1.2.3.4",
+					Cluster:  "cluster",
+					Locality: &locality{Zone: "us-west1a"},
+					Metadata: map[string]string{
+						"TRAFFICDIRECTOR_NETWORK_NAME":       "vpc-network-name",
+						"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "666",
 					},
 				},
 			},
 		},
-		Node: &node{
-			Id:       "dummy-uuid~1.2.3.4",
-			Cluster:  "cluster",
-			Locality: &locality{Zone: "us-west1a"},
-			Metadata: map[string]string{
-				"TRAFFICDIRECTOR_NETWORK_NAME":       "vpc-network-name",
-				"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "666",
+		{
+			desc: "happy case file watcher config",
+			input: configInput{
+				xdsServerUri:            "dummy-server",
+				gcpProjectNumber:        666,
+				vpcNetworkName:          "vpc-network-name",
+				ip:                      "1.2.3.4",
+				zone:                    "us-west1a",
+				enableFileWatcherConfig: true,
 			},
-		},
-		CertificateProviders: map[string]certificateProviderConfig{
-			"google_cloud_private_spiffe": {
-				PluginName: "file_watcher",
-				Config: privateSPIFFEConfig{
-					CertificateFile:   "/var/run/gke-spiffe/certs/certificates.pem",
-					PrivateKeyFile:    "/var/run/gke-spiffe/certs/private_key.pem",
-					CACertificateFile: "/var/run/gke-spiffe/certs/ca_certificates.pem",
-					RefreshInterval:   "10m",
+			output: config{
+				XdsServers: []server{
+					{
+						ServerUri: "dummy-server",
+						ChannelCreds: []creds{
+							{
+								Type: "google_default",
+							},
+						},
+					},
+				},
+				Node: &node{
+					Id:       "dummy-uuid~1.2.3.4",
+					Cluster:  "cluster",
+					Locality: &locality{Zone: "us-west1a"},
+					Metadata: map[string]string{
+						"TRAFFICDIRECTOR_NETWORK_NAME":       "vpc-network-name",
+						"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "666",
+					},
+				},
+				CertificateProviders: map[string]certificateProviderConfig{
+					"google_cloud_private_spiffe": {
+						PluginName: "file_watcher",
+						Config: privateSPIFFEConfig{
+							CertificateFile:   "/var/run/gke-spiffe/certs/certificates.pem",
+							PrivateKeyFile:    "/var/run/gke-spiffe/certs/private_key.pem",
+							CACertificateFile: "/var/run/gke-spiffe/certs/ca_certificates.pem",
+							RefreshInterval:   "10m",
+						},
+					},
 				},
 			},
 		},
 	}
-	wantOutput, err := json.MarshalIndent(wantConfig, "", "  ")
-	if err != nil {
-		t.Fatalf("json.MarshalIndent(%+v) failed: %v", wantConfig, err)
-	}
 
-	gotOutput, err := generate(input)
-	if err != nil {
-		t.Fatalf("generate(%+v) failed: %v", input, err)
-	}
-	if diff := cmp.Diff(string(wantOutput), string(gotOutput)); diff != "" {
-		t.Fatalf("generate(%+v) returned output does not match expected (-want +got):\n%s", input, diff)
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			wantOutput, err := json.MarshalIndent(test.output, "", "  ")
+			if err != nil {
+				t.Fatalf("json.MarshalIndent(%+v) failed: %v", test.output, err)
+			}
+
+			gotOutput, err := generate(test.input)
+			if err != nil {
+				t.Fatalf("generate(%+v) failed: %v", test.input, err)
+			}
+			if diff := cmp.Diff(string(wantOutput), string(gotOutput)); diff != "" {
+				t.Fatalf("generate(%+v) returned output does not match expected (-want +got):\n%s", test.input, diff)
+			}
+		})
 	}
 }
 func TestGetZone(t *testing.T) {

@@ -30,11 +30,14 @@ import (
 	"github.com/google/uuid"
 )
 
-var xdsServerUri = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
-var outputName = flag.String("output", "-", "output file name")
-var gcpProjectNumber = flag.Int64("gcp-project-number", 0,
-	"the gcp project number. If unknown, can be found via 'gcloud projects list'")
-var vpcNetworkName = flag.String("vpc-network-name", "default", "VPC network name")
+var (
+	xdsServerUri     = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
+	outputName       = flag.String("output", "-", "output file name")
+	gcpProjectNumber = flag.Int64("gcp-project-number", 0,
+		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
+	vpcNetworkName          = flag.String("vpc-network-name", "default", "VPC network name")
+	enableFileWatcherConfig = flag.Bool("enable-file-watcher-config", false, "whether or not to generate file_watcher certificate provider config")
+)
 
 // For overriding in unit tests.
 var newUUIDString = func() string { return uuid.New().String() }
@@ -60,11 +63,12 @@ func main() {
 		zone = ""
 	}
 	config, err := generate(configInput{
-		xdsServerUri:     *xdsServerUri,
-		gcpProjectNumber: *gcpProjectNumber,
-		vpcNetworkName:   *vpcNetworkName,
-		ip:               ip,
-		zone:             zone,
+		xdsServerUri:            *xdsServerUri,
+		gcpProjectNumber:        *gcpProjectNumber,
+		vpcNetworkName:          *vpcNetworkName,
+		ip:                      ip,
+		zone:                    zone,
+		enableFileWatcherConfig: *enableFileWatcherConfig,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
@@ -98,11 +102,12 @@ func main() {
 }
 
 type configInput struct {
-	xdsServerUri     string
-	gcpProjectNumber int64
-	vpcNetworkName   string
-	ip               string
-	zone             string
+	xdsServerUri            string
+	gcpProjectNumber        int64
+	vpcNetworkName          string
+	ip                      string
+	zone                    string
+	enableFileWatcherConfig bool
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -126,7 +131,9 @@ func generate(in configInput) ([]byte, error) {
 				"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": strconv.FormatInt(in.gcpProjectNumber, 10),
 			},
 		},
-		CertificateProviders: map[string]certificateProviderConfig{
+	}
+	if in.enableFileWatcherConfig {
+		c.CertificateProviders = map[string]certificateProviderConfig{
 			"google_cloud_private_spiffe": {
 				PluginName: "file_watcher",
 				Config: privateSPIFFEConfig{
@@ -138,8 +145,9 @@ func generate(in configInput) ([]byte, error) {
 					RefreshInterval: "10m",
 				},
 			},
-		},
+		}
 	}
+
 	return json.MarshalIndent(c, "", "  ")
 }
 
