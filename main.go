@@ -142,7 +142,7 @@ func generate(in configInput) ([]byte, error) {
 					CACertificateFile: "/var/run/gke-spiffe/certs/ca_certificates.pem",
 					// The file_watcher plugin will parse this a Duration proto, but it is totally
 					// fine to just emit a string here.
-					RefreshInterval: "10m",
+					RefreshInterval: "600s",
 				},
 			},
 		}

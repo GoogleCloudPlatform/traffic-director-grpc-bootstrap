@@ -105,7 +105,7 @@ func TestGenerate2(t *testing.T) {
 							CertificateFile:   "/var/run/gke-spiffe/certs/certificates.pem",
 							PrivateKeyFile:    "/var/run/gke-spiffe/certs/private_key.pem",
 							CACertificateFile: "/var/run/gke-spiffe/certs/ca_certificates.pem",
-							RefreshInterval:   "10m",
+							RefreshInterval:   "600s",
 						},
 					},
 				},
