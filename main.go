@@ -52,6 +52,7 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to determine project id: %s\n", err)
 			os.Exit(1)
+
 		}
 	}
 	ip, err := getHostIp()

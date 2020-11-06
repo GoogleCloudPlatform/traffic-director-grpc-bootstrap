@@ -25,7 +25,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestGenerate2(t *testing.T) {
+func TestGenerate(t *testing.T) {
 	origUUIString := newUUIDString
 	newUUIDString = func() string { return "dummy-uuid" }
 	defer func() { newUUIDString = origUUIString }()
@@ -130,6 +130,7 @@ func TestGenerate2(t *testing.T) {
 		})
 	}
 }
+
 func TestGetZone(t *testing.T) {
 	server := httptest.NewServer(nil)
 	defer server.Close()
