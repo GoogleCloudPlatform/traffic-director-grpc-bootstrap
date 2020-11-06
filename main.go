@@ -35,7 +35,9 @@ var (
 	outputName       = flag.String("output", "-", "output file name")
 	gcpProjectNumber = flag.Int64("gcp-project-number", 0,
 		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
-	vpcNetworkName          = flag.String("vpc-network-name", "default", "VPC network name")
+	vpcNetworkName = flag.String("vpc-network-name", "default", "VPC network name")
+
+	// Notice: This flag is EXPERIMENTAL and may be changed or removed in a later release.
 	enableFileWatcherConfig = flag.Bool("enable-file-watcher-config", false, "whether or not to generate file_watcher certificate provider config")
 )
 
