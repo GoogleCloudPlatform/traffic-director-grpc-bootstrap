@@ -35,14 +35,9 @@ var (
 	outputName       = flag.String("output", "-", "output file name")
 	gcpProjectNumber = flag.Int64("gcp-project-number", 0,
 		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
-	vpcNetworkName = flag.String("vpc-network-name", "default", "VPC network name")
-
-	// Notice: This flag is EXPERIMENTAL and may be changed or removed in a later release.
-	enableFileWatcherConfig = flag.Bool("enable-file-watcher-config", false, "whether or not to generate file_watcher certificate provider config")
+	vpcNetworkName          = flag.String("vpc-network-name", "default", "VPC network name")
+	enableFileWatcherConfig = flag.Bool("enable-file-watcher-config", false, "whether or not to generate file_watcher certificate provider config. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
-
-// For overriding in unit tests.
-var newUUIDString = func() string { return uuid.New().String() }
 
 func main() {
 	flag.Parse()
@@ -52,7 +47,6 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to determine project id: %s\n", err)
 			os.Exit(1)
-
 		}
 	}
 	ip, err := getHostIp()
@@ -124,7 +118,7 @@ func generate(in configInput) ([]byte, error) {
 			},
 		},
 		Node: &node{
-			Id:      newUUIDString() + "~" + in.ip,
+			Id:      uuid.New().String() + "~" + in.ip,
 			Cluster: "cluster", // unused by TD
 			Locality: &locality{
 				Zone: in.zone,

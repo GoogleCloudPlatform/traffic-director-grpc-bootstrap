@@ -16,115 +16,111 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
 )
 
 func TestGenerate(t *testing.T) {
-	origUUIString := newUUIDString
-	newUUIDString = func() string { return "dummy-uuid" }
-	defer func() { newUUIDString = origUUIString }()
-
 	tests := []struct {
-		desc  string
-		input configInput
-		// This is much easier than specifying the expected JSON config as a string
-		// here since we have to be accurate with whitespace.
-		output config
+		desc       string
+		input      configInput
+		wantOutput string
 	}{
 		{
 			desc: "happy case without file watcher config",
 			input: configInput{
-				xdsServerUri:     "dummy-server",
-				gcpProjectNumber: 666,
-				vpcNetworkName:   "vpc-network-name",
-				ip:               "1.2.3.4",
-				zone:             "us-west1a",
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
 			},
-			output: config{
-				XdsServers: []server{
-					{
-						ServerUri: "dummy-server",
-						ChannelCreds: []creds{
-							{
-								Type: "google_default",
-							},
-						},
-					},
-				},
-				Node: &node{
-					Id:       "dummy-uuid~1.2.3.4",
-					Cluster:  "cluster",
-					Locality: &locality{Zone: "us-west1a"},
-					Metadata: map[string]string{
-						"TRAFFICDIRECTOR_NETWORK_NAME":       "vpc-network-name",
-						"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "666",
-					},
-				},
-			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ]
+    }
+  ],
+  "node": {
+    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
+    "cluster": "cluster",
+    "metadata": {
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
 		},
 		{
 			desc: "happy case file watcher config",
 			input: configInput{
-				xdsServerUri:            "dummy-server",
-				gcpProjectNumber:        666,
-				vpcNetworkName:          "vpc-network-name",
-				ip:                      "1.2.3.4",
-				zone:                    "us-west1a",
+				xdsServerUri:            "example.com:443",
+				gcpProjectNumber:        123456789012345,
+				vpcNetworkName:          "thedefault",
+				ip:                      "10.9.8.7",
+				zone:                    "uscentral-5",
 				enableFileWatcherConfig: true,
 			},
-			output: config{
-				XdsServers: []server{
-					{
-						ServerUri: "dummy-server",
-						ChannelCreds: []creds{
-							{
-								Type: "google_default",
-							},
-						},
-					},
-				},
-				Node: &node{
-					Id:       "dummy-uuid~1.2.3.4",
-					Cluster:  "cluster",
-					Locality: &locality{Zone: "us-west1a"},
-					Metadata: map[string]string{
-						"TRAFFICDIRECTOR_NETWORK_NAME":       "vpc-network-name",
-						"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "666",
-					},
-				},
-				CertificateProviders: map[string]certificateProviderConfig{
-					"google_cloud_private_spiffe": {
-						PluginName: "file_watcher",
-						Config: privateSPIFFEConfig{
-							CertificateFile:   "/var/run/gke-spiffe/certs/certificates.pem",
-							PrivateKeyFile:    "/var/run/gke-spiffe/certs/private_key.pem",
-							CACertificateFile: "/var/run/gke-spiffe/certs/ca_certificates.pem",
-							RefreshInterval:   "600s",
-						},
-					},
-				},
-			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ]
+    }
+  ],
+  "node": {
+    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
+    "cluster": "cluster",
+    "metadata": {
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "/var/run/gke-spiffe/certs/certificates.pem",
+        "private_key_file": "/var/run/gke-spiffe/certs/private_key.pem",
+        "ca_certificate_file": "/var/run/gke-spiffe/certs/ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  }
+}`,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			wantOutput, err := json.MarshalIndent(test.output, "", "  ")
-			if err != nil {
-				t.Fatalf("json.MarshalIndent(%+v) failed: %v", test.output, err)
-			}
+			uuid.SetRand(rand.New(rand.NewSource(1)))
 
 			gotOutput, err := generate(test.input)
 			if err != nil {
 				t.Fatalf("generate(%+v) failed: %v", test.input, err)
 			}
-			if diff := cmp.Diff(string(wantOutput), string(gotOutput)); diff != "" {
+			if diff := cmp.Diff(test.wantOutput, string(gotOutput)); diff != "" {
 				t.Fatalf("generate(%+v) returned output does not match expected (-want +got):\n%s", test.input, diff)
 			}
 		})
