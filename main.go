@@ -30,11 +30,14 @@ import (
 	"github.com/google/uuid"
 )
 
-var xdsServerUri = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
-var outputName = flag.String("output", "-", "output file name")
-var gcpProjectNumber = flag.Int64("gcp-project-number", 0,
-	"the gcp project number. If unknown, can be found via 'gcloud projects list'")
-var vpcNetworkName = flag.String("vpc-network-name", "default", "VPC network name")
+var (
+	xdsServerUri     = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
+	outputName       = flag.String("output", "-", "output file name")
+	gcpProjectNumber = flag.Int64("gcp-project-number", 0,
+		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
+	vpcNetworkName     = flag.String("vpc-network-name", "default", "VPC network name")
+	includePSMSecurity = flag.Bool("include-psm-security", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+)
 
 func main() {
 	flag.Parse()
@@ -57,11 +60,12 @@ func main() {
 		zone = ""
 	}
 	config, err := generate(configInput{
-		xdsServerUri:     *xdsServerUri,
-		gcpProjectNumber: *gcpProjectNumber,
-		vpcNetworkName:   *vpcNetworkName,
-		ip:               ip,
-		zone:             zone,
+		xdsServerUri:       *xdsServerUri,
+		gcpProjectNumber:   *gcpProjectNumber,
+		vpcNetworkName:     *vpcNetworkName,
+		ip:                 ip,
+		zone:               zone,
+		includePSMSecurity: *includePSMSecurity,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
@@ -95,11 +99,12 @@ func main() {
 }
 
 type configInput struct {
-	xdsServerUri     string
-	gcpProjectNumber int64
-	vpcNetworkName   string
-	ip               string
-	zone             string
+	xdsServerUri       string
+	gcpProjectNumber   int64
+	vpcNetworkName     string
+	ip                 string
+	zone               string
+	includePSMSecurity bool
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -124,6 +129,22 @@ func generate(in configInput) ([]byte, error) {
 			},
 		},
 	}
+	if in.includePSMSecurity {
+		c.CertificateProviders = map[string]certificateProviderConfig{
+			"google_cloud_private_spiffe": {
+				PluginName: "file_watcher",
+				Config: privateSPIFFEConfig{
+					CertificateFile:   "/var/run/gke-spiffe/certs/certificates.pem",
+					PrivateKeyFile:    "/var/run/gke-spiffe/certs/private_key.pem",
+					CACertificateFile: "/var/run/gke-spiffe/certs/ca_certificates.pem",
+					// The file_watcher plugin will parse this a Duration proto, but it is totally
+					// fine to just emit a string here.
+					RefreshInterval: "600s",
+				},
+			},
+		}
+	}
+
 	return json.MarshalIndent(c, "", "  ")
 }
 
@@ -194,8 +215,9 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 }
 
 type config struct {
-	XdsServers []server `json:"xds_servers,omitempty"`
-	Node       *node    `json:"node,omitempty"`
+	XdsServers           []server                             `json:"xds_servers,omitempty"`
+	Node                 *node                                `json:"node,omitempty"`
+	CertificateProviders map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
 }
 
 type server struct {
@@ -220,4 +242,16 @@ type locality struct {
 	Region  string `json:"region,omitempty"`
 	Zone    string `json:"zone,omitempty"`
 	SubZone string `json:"sub_zone,omitempty"`
+}
+
+type certificateProviderConfig struct {
+	PluginName string      `json:"plugin_name,omitempty"`
+	Config     interface{} `json:"config,omitempty"`
+}
+
+type privateSPIFFEConfig struct {
+	CertificateFile   string `json:"certificate_file,omitempty"`
+	PrivateKeyFile    string `json:"private_key_file,omitempty"`
+	CACertificateFile string `json:"ca_certificate_file,omitempty"`
+	RefreshInterval   string `json:"refresh_interval,omitempty"`
 }

@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"math/rand"
 	"net"
 	"net/http"
@@ -28,15 +27,21 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
-	uuid.SetRand(rand.New(rand.NewSource(1)))
-	in := configInput{
-		xdsServerUri:     "example.com:443",
-		gcpProjectNumber: 123456789012345,
-		vpcNetworkName:   "thedefault",
-		ip:               "10.9.8.7",
-		zone:             "uscentral-5",
-	}
-	want := `{
+	tests := []struct {
+		desc       string
+		input      configInput
+		wantOutput string
+	}{
+		{
+			desc: "happy case without file watcher config",
+			input: configInput{
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
+			},
+			wantOutput: `{
   "xds_servers": [
     {
       "server_uri": "example.com:443",
@@ -58,22 +63,67 @@ func TestGenerate(t *testing.T) {
       "zone": "uscentral-5"
     }
   }
-}`
-	got, err := generate(in)
-	if err != nil {
-		t.Fatalf("want no error, got: %v", err)
+}`,
+		},
+		{
+			desc: "happy case file watcher config",
+			input: configInput{
+				xdsServerUri:       "example.com:443",
+				gcpProjectNumber:   123456789012345,
+				vpcNetworkName:     "thedefault",
+				ip:                 "10.9.8.7",
+				zone:               "uscentral-5",
+				includePSMSecurity: true,
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ]
+    }
+  ],
+  "node": {
+    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
+    "cluster": "cluster",
+    "metadata": {
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "/var/run/gke-spiffe/certs/certificates.pem",
+        "private_key_file": "/var/run/gke-spiffe/certs/private_key.pem",
+        "ca_certificate_file": "/var/run/gke-spiffe/certs/ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  }
+}`,
+		},
 	}
-	if want != string(got) {
-		var wantParsed, gotParsed interface{}
-		err1 := json.Unmarshal([]byte(want), &wantParsed)
-		err2 := json.Unmarshal(got, &gotParsed)
-		if err1 != nil || err2 != nil {
-			t.Logf("problem parsing json, error for want: %v, got: %v", err1, err2)
-		} else if diff := cmp.Diff(wantParsed, gotParsed); diff != "" {
-			t.Fatalf("not equal (-want +got):\n%s", diff)
-		}
-		t.Fatalf("not equal, but structure matched\nwant:\n%v\n----------------\ngot:\n%v",
-			want, string(got))
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			uuid.SetRand(rand.New(rand.NewSource(1)))
+
+			gotOutput, err := generate(test.input)
+			if err != nil {
+				t.Fatalf("generate(%+v) failed: %v", test.input, err)
+			}
+			if diff := cmp.Diff(test.wantOutput, string(gotOutput)); diff != "" {
+				t.Fatalf("generate(%+v) returned output does not match expected (-want +got):\n%s", test.input, diff)
+			}
+		})
 	}
 }
 
