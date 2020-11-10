@@ -35,8 +35,8 @@ var (
 	outputName       = flag.String("output", "-", "output file name")
 	gcpProjectNumber = flag.Int64("gcp-project-number", 0,
 		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
-	vpcNetworkName          = flag.String("vpc-network-name", "default", "VPC network name")
-	enableFileWatcherConfig = flag.Bool("enable-file-watcher-config", false, "whether or not to generate file_watcher certificate provider config. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	vpcNetworkName     = flag.String("vpc-network-name", "default", "VPC network name")
+	includePSMSecurity = flag.Bool("include-psm-security", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -60,12 +60,12 @@ func main() {
 		zone = ""
 	}
 	config, err := generate(configInput{
-		xdsServerUri:            *xdsServerUri,
-		gcpProjectNumber:        *gcpProjectNumber,
-		vpcNetworkName:          *vpcNetworkName,
-		ip:                      ip,
-		zone:                    zone,
-		enableFileWatcherConfig: *enableFileWatcherConfig,
+		xdsServerUri:       *xdsServerUri,
+		gcpProjectNumber:   *gcpProjectNumber,
+		vpcNetworkName:     *vpcNetworkName,
+		ip:                 ip,
+		zone:               zone,
+		includePSMSecurity: *includePSMSecurity,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
@@ -99,12 +99,12 @@ func main() {
 }
 
 type configInput struct {
-	xdsServerUri            string
-	gcpProjectNumber        int64
-	vpcNetworkName          string
-	ip                      string
-	zone                    string
-	enableFileWatcherConfig bool
+	xdsServerUri       string
+	gcpProjectNumber   int64
+	vpcNetworkName     string
+	ip                 string
+	zone               string
+	includePSMSecurity bool
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -129,7 +129,7 @@ func generate(in configInput) ([]byte, error) {
 			},
 		},
 	}
-	if in.enableFileWatcherConfig {
+	if in.includePSMSecurity {
 		c.CertificateProviders = map[string]certificateProviderConfig{
 			"google_cloud_private_spiffe": {
 				PluginName: "file_watcher",

@@ -68,12 +68,12 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case file watcher config",
 			input: configInput{
-				xdsServerUri:            "example.com:443",
-				gcpProjectNumber:        123456789012345,
-				vpcNetworkName:          "thedefault",
-				ip:                      "10.9.8.7",
-				zone:                    "uscentral-5",
-				enableFileWatcherConfig: true,
+				xdsServerUri:       "example.com:443",
+				gcpProjectNumber:   123456789012345,
+				vpcNetworkName:     "thedefault",
+				ip:                 "10.9.8.7",
+				zone:               "uscentral-5",
+				includePSMSecurity: true,
 			},
 			wantOutput: `{
   "xds_servers": [
