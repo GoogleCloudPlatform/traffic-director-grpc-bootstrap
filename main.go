@@ -35,8 +35,9 @@ var (
 	outputName       = flag.String("output", "-", "output file name")
 	gcpProjectNumber = flag.Int64("gcp-project-number", 0,
 		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
-	vpcNetworkName     = flag.String("vpc-network-name", "default", "VPC network name")
-	includePSMSecurity = flag.Bool("include-psm-security", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	vpcNetworkName          = flag.String("vpc-network-name", "default", "VPC network name")
+	includePSMSecurity      = flag.Bool("include-psm-security", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeServerResourceID = flag.Bool("include-server-resource-id", false, "whether or not to generate config for server resource id. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -60,12 +61,13 @@ func main() {
 		zone = ""
 	}
 	config, err := generate(configInput{
-		xdsServerUri:       *xdsServerUri,
-		gcpProjectNumber:   *gcpProjectNumber,
-		vpcNetworkName:     *vpcNetworkName,
-		ip:                 ip,
-		zone:               zone,
-		includePSMSecurity: *includePSMSecurity,
+		xdsServerUri:            *xdsServerUri,
+		gcpProjectNumber:        *gcpProjectNumber,
+		vpcNetworkName:          *vpcNetworkName,
+		ip:                      ip,
+		zone:                    zone,
+		includePSMSecurity:      *includePSMSecurity,
+		includeServerResourceID: *includeServerResourceID,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
@@ -99,12 +101,13 @@ func main() {
 }
 
 type configInput struct {
-	xdsServerUri       string
-	gcpProjectNumber   int64
-	vpcNetworkName     string
-	ip                 string
-	zone               string
-	includePSMSecurity bool
+	xdsServerUri            string
+	gcpProjectNumber        int64
+	vpcNetworkName          string
+	ip                      string
+	zone                    string
+	includePSMSecurity      bool
+	includeServerResourceID bool
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -128,7 +131,6 @@ func generate(in configInput) ([]byte, error) {
 				"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": strconv.FormatInt(in.gcpProjectNumber, 10),
 			},
 		},
-		GRPCServerResourceNameId: "grpc/server",
 	}
 	if in.includePSMSecurity {
 		c.CertificateProviders = map[string]certificateProviderConfig{
@@ -144,6 +146,9 @@ func generate(in configInput) ([]byte, error) {
 				},
 			},
 		}
+	}
+	if in.includeServerResourceID {
+		c.GRPCServerResourceNameID = "grpc/server"
 	}
 
 	return json.MarshalIndent(c, "", "  ")
@@ -219,7 +224,7 @@ type config struct {
 	XdsServers               []server                             `json:"xds_servers,omitempty"`
 	Node                     *node                                `json:"node,omitempty"`
 	CertificateProviders     map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
-	GRPCServerResourceNameId string                               `json:"grpc_server_resource_name_id,omitempty"`
+	GRPCServerResourceNameID string                               `json:"grpc_server_resource_name_id,omitempty"`
 }
 
 type server struct {
