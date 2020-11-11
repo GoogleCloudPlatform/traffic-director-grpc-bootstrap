@@ -128,6 +128,7 @@ func generate(in configInput) ([]byte, error) {
 				"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": strconv.FormatInt(in.gcpProjectNumber, 10),
 			},
 		},
+		GRPCServerResourceNameId: "grpc/server",
 	}
 	if in.includePSMSecurity {
 		c.CertificateProviders = map[string]certificateProviderConfig{
@@ -215,9 +216,10 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 }
 
 type config struct {
-	XdsServers           []server                             `json:"xds_servers,omitempty"`
-	Node                 *node                                `json:"node,omitempty"`
-	CertificateProviders map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
+	XdsServers               []server                             `json:"xds_servers,omitempty"`
+	Node                     *node                                `json:"node,omitempty"`
+	CertificateProviders     map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
+	GRPCServerResourceNameId string                               `json:"grpc_server_resource_name_id,omitempty"`
 }
 
 type server struct {

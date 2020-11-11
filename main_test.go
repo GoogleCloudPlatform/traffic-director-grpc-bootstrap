@@ -62,7 +62,8 @@ func TestGenerate(t *testing.T) {
     "locality": {
       "zone": "uscentral-5"
     }
-  }
+  },
+  "grpc_server_resource_name_id": "grpc/server"
 }`,
 		},
 		{
@@ -107,7 +108,8 @@ func TestGenerate(t *testing.T) {
         "refresh_interval": "600s"
       }
     }
-  }
+  },
+  "grpc_server_resource_name_id": "grpc/server"
 }`,
 		},
 	}
