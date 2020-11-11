@@ -33,7 +33,7 @@ func TestGenerate(t *testing.T) {
 		wantOutput string
 	}{
 		{
-			desc: "happy case without file watcher config",
+			desc: "happy case",
 			input: configInput{
 				xdsServerUri:     "example.com:443",
 				gcpProjectNumber: 123456789012345,
@@ -66,14 +66,15 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "happy case file watcher config",
+			desc: "happy case with security config",
 			input: configInput{
-				xdsServerUri:       "example.com:443",
-				gcpProjectNumber:   123456789012345,
-				vpcNetworkName:     "thedefault",
-				ip:                 "10.9.8.7",
-				zone:               "uscentral-5",
-				includePSMSecurity: true,
+				xdsServerUri:            "example.com:443",
+				gcpProjectNumber:        123456789012345,
+				vpcNetworkName:          "thedefault",
+				ip:                      "10.9.8.7",
+				zone:                    "uscentral-5",
+				includePSMSecurity:      true,
+				includeServerResourceID: true,
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -107,7 +108,8 @@ func TestGenerate(t *testing.T) {
         "refresh_interval": "600s"
       }
     }
-  }
+  },
+  "grpc_server_resource_name_id": "grpc/server"
 }`,
 		},
 	}
