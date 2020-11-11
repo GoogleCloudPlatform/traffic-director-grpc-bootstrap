@@ -53,9 +53,10 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "node": {
-    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
+    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
       "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
     },
@@ -88,9 +89,10 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "node": {
-    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
+    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
       "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
     },
