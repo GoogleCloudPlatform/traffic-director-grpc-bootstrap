@@ -40,10 +40,6 @@ var (
 	includeServerResourceID = flag.Bool("include-server-resource-id", false, "whether or not to generate config for server resource id. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
-// The `id` field of the Node proto is set to a value of the format
-// `projects/{project number}/networks/{network name}/nodes/{uuid}`.
-const nodeIDFormatStr = "projects/%d/networks/%s/nodes/%s"
-
 func main() {
 	flag.Parse()
 	if *gcpProjectNumber == 0 {
@@ -129,7 +125,7 @@ func generate(in configInput) ([]byte, error) {
 		// v3 implementation expects these in the former. Once we stop supporting
 		// v2, we can get rid of these metadata entries.
 		Node: &node{
-			Id:      fmt.Sprintf(nodeIDFormatStr, in.gcpProjectNumber, in.vpcNetworkName, uuid.New().String()),
+			Id:      fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, in.vpcNetworkName, uuid.New().String()),
 			Cluster: "cluster", // unused by TD
 			Locality: &locality{
 				Zone: in.zone,
