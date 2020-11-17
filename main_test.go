@@ -66,15 +66,14 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "happy case with security config",
+			desc: "happy case with v3 config",
 			input: configInput{
-				xdsServerUri:            "example.com:443",
-				gcpProjectNumber:        123456789012345,
-				vpcNetworkName:          "thedefault",
-				ip:                      "10.9.8.7",
-				zone:                    "uscentral-5",
-				includePSMSecurity:      true,
-				includeServerResourceID: true,
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				includeV3Features: true,
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -88,9 +87,46 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "node": {
-    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
+    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
     "cluster": "cluster",
     "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
+		{
+			desc: "happy case with v3 and security config",
+			input: configInput{
+				xdsServerUri:       "example.com:443",
+				gcpProjectNumber:   123456789012345,
+				vpcNetworkName:     "thedefault",
+				ip:                 "10.9.8.7",
+				zone:               "uscentral-5",
+				includeV3Features:  true,
+				includePSMSecurity: true,
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ]
+    }
+  ],
+  "node": {
+    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
       "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
     },
