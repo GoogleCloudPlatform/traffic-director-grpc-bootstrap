@@ -35,8 +35,9 @@ var (
 	outputName       = flag.String("output", "-", "output file name")
 	gcpProjectNumber = flag.Int64("gcp-project-number", 0,
 		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
-	vpcNetworkName    = flag.String("vpc-network-name", "default", "VPC network name")
-	includeV3Features = flag.Bool("include-v3-features", false, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	vpcNetworkName     = flag.String("vpc-network-name", "default", "VPC network name")
+	includeV3Features  = flag.Bool("include-v3-features", false, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includePSMSecurity = flag.Bool("include-psm-security", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -60,12 +61,13 @@ func main() {
 		zone = ""
 	}
 	config, err := generate(configInput{
-		xdsServerUri:      *xdsServerUri,
-		gcpProjectNumber:  *gcpProjectNumber,
-		vpcNetworkName:    *vpcNetworkName,
-		ip:                ip,
-		zone:              zone,
-		includeV3Features: *includeV3Features,
+		xdsServerUri:       *xdsServerUri,
+		gcpProjectNumber:   *gcpProjectNumber,
+		vpcNetworkName:     *vpcNetworkName,
+		ip:                 ip,
+		zone:               zone,
+		includeV3Features:  *includeV3Features,
+		includePSMSecurity: *includePSMSecurity,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
@@ -99,12 +101,13 @@ func main() {
 }
 
 type configInput struct {
-	xdsServerUri      string
-	gcpProjectNumber  int64
-	vpcNetworkName    string
-	ip                string
-	zone              string
-	includeV3Features bool
+	xdsServerUri       string
+	gcpProjectNumber   int64
+	vpcNetworkName     string
+	ip                 string
+	zone               string
+	includeV3Features  bool
+	includePSMSecurity bool
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -138,6 +141,8 @@ func generate(in configInput) ([]byte, error) {
 		// xDS v2 implementation in TD expects the IP address to be encoded in the
 		// id field while the v3 implementation expects this in the metadata.
 		c.Node.Metadata["INSTANCE_IP"] = in.ip
+	}
+	if in.includePSMSecurity {
 		c.CertificateProviders = map[string]certificateProviderConfig{
 			"google_cloud_private_spiffe": {
 				PluginName: "file_watcher",
