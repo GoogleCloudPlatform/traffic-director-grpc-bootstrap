@@ -97,7 +97,10 @@ func TestGenerate(t *testing.T) {
     "locality": {
       "zone": "uscentral-5"
     }
-  }
+  },
+  "server_features": [
+    "xds_v3"
+  ]
 }`,
 		},
 		{
@@ -145,7 +148,10 @@ func TestGenerate(t *testing.T) {
       }
     }
   },
-  "grpc_server_resource_name_id": "grpc/server"
+  "grpc_server_resource_name_id": "grpc/server",
+  "server_features": [
+    "xds_v3"
+  ]
 }`,
 		},
 	}
