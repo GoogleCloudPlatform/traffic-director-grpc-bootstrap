@@ -36,6 +36,7 @@ var (
 	gcpProjectNumber = flag.Int64("gcp-project-number", 0,
 		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
 	vpcNetworkName     = flag.String("vpc-network-name", "default", "VPC network name")
+	localityZone       = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
 	includeV3Features  = flag.Bool("include-v3-features", false, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includePSMSecurity = flag.Bool("include-psm-security", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
@@ -55,10 +56,14 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Warning: failed to determine host's ip: %s\n", err)
 		ip = ""
 	}
-	zone, err := getZone()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to determine zone: %s\n", err)
-		zone = ""
+	// Retrieve zone from the metadata server only if not specified in args.
+	zone := *localityZone
+	if zone == "" {
+		zone, err = getZone()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to determine zone: %s\n", err)
+			zone = ""
+		}
 	}
 	config, err := generate(configInput{
 		xdsServerUri:       *xdsServerUri,
