@@ -19,6 +19,8 @@ steps:
   args: ['go', 'test', './...']
 - name: alpine
   args: ['./tools/package.sh', '$COMMIT_SHA']
+- name: gcr.io/cloud-builders/docker
+  args: [ 'build', '-t', 'gcr.io/grpc-testing/td-grpc-bootstrap:${COMMIT_SHA}', '.' ]
 options:
   env:
   - CGO_ENABLED=0
@@ -26,3 +28,4 @@ artifacts:
   objects:
     location: 'gs://grpc-td-builds/td-grpc-bootstrap/'
     paths: ['td-grpc-bootstrap-${COMMIT_SHA}.tar.gz']
+images: ['gcr.io/grpc-testing/td-grpc-bootstrap:${COMMIT_SHA}']
