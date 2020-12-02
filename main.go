@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,6 +40,7 @@ var (
 	localityZone       = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
 	includeV3Features  = flag.Bool("include-v3-features", false, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includePSMSecurity = flag.Bool("include-psm-security", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	ecsMetadataLabels  = flag.String("ecs-metadata-labels", "", "a comma separated list of key-value pairs (e.g., k1=v1,k2=v2) to specify endpoint config selector metadata labels. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -65,6 +67,11 @@ func main() {
 			zone = ""
 		}
 	}
+	labelsMap, err := parseMetadataLabels(*ecsMetadataLabels)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
 	config, err := generate(configInput{
 		xdsServerUri:       *xdsServerUri,
 		gcpProjectNumber:   *gcpProjectNumber,
@@ -73,6 +80,7 @@ func main() {
 		zone:               zone,
 		includeV3Features:  *includeV3Features,
 		includePSMSecurity: *includePSMSecurity,
+		ecsMetadataLabels:  labelsMap,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
@@ -113,6 +121,7 @@ type configInput struct {
 	zone               string
 	includeV3Features  bool
 	includePSMSecurity bool
+	ecsMetadataLabels  map[string]string
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -138,6 +147,9 @@ func generate(in configInput) ([]byte, error) {
 		},
 	}
 
+	for k, v := range in.ecsMetadataLabels {
+		c.Node.Metadata[k] = v
+	}
 	if in.includeV3Features {
 		// xDS v2 implementation in TD expects the projectNumber and networkName in
 		// the metadata field while the v3 implementation expects these in the id
@@ -232,6 +244,24 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 		return nil, fmt.Errorf("failed reading from metadata server: %w", err)
 	}
 	return body, nil
+}
+
+// Parse the comma separated list of labels specified on the command line as
+// part of the --ecs-metadata-labels flag into a map of key value pairs.
+func parseMetadataLabels(labels string) (map[string]string, error) {
+	if labels == "" {
+		return nil, nil
+	}
+	labelsMap := make(map[string]string)
+	parts := strings.Split(labels, ",")
+	for _, part := range parts {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			return nil, fmt.Errorf("Error: --ecs-metadata-labels field %q not formatted as a comma separated list of key-value pairs. Expected to be of the form k1=v1,k2=v2,k3=v3\n", labels)
+		}
+		labelsMap[kv[0]] = kv[1]
+	}
+	return labelsMap, nil
 }
 
 type config struct {

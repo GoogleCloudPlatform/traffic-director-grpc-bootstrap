@@ -35,11 +35,12 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case",
 			input: configInput{
-				xdsServerUri:     "example.com:443",
-				gcpProjectNumber: 123456789012345,
-				vpcNetworkName:   "thedefault",
-				ip:               "10.9.8.7",
-				zone:             "uscentral-5",
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				ecsMetadataLabels: map[string]string{"k1": "v1", "k2": "v2"},
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -57,7 +58,9 @@ func TestGenerate(t *testing.T) {
     "cluster": "cluster",
     "metadata": {
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
+      "k1": "v1",
+      "k2": "v2"
     },
     "locality": {
       "zone": "uscentral-5"
@@ -220,5 +223,57 @@ func overrideHTTP(s *httptest.Server) {
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			return (&net.Dialer{}).DialContext(ctx, "tcp", s.Listener.Addr().String())
 		},
+	}
+}
+
+func TestParseMetadataLabels(t *testing.T) {
+	tests := []struct {
+		desc    string
+		input   string
+		wantMap map[string]string
+		wantErr bool
+	}{
+		{
+			desc:    "empty",
+			input:   "",
+			wantMap: nil,
+		},
+		{
+			desc:    "not comma separated",
+			input:   "k1=v1;k2=v2;k3=v3",
+			wantMap: nil,
+			wantErr: true,
+		},
+		{
+			desc:    "bad key-value pair",
+			input:   "k1=v1,k2=v2,k3=v3=foo",
+			wantMap: nil,
+			wantErr: true,
+		},
+		{
+			desc:    "one good",
+			input:   "k1=v1",
+			wantMap: map[string]string{"k1": "v1"},
+		},
+		{
+			desc:    "multiple good",
+			input:   "k1=v1,k2=v2,k3=v3",
+			wantMap: map[string]string{"k1": "v1", "k2": "v2", "k3": "v3"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			gotMap, err := parseMetadataLabels(test.input)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("parseMetadataLabels(%s) = (%v, %v) want (%v, %v)", test.input, gotMap, err, test.wantMap, test.wantErr)
+			}
+			if test.wantErr {
+				return
+			}
+			if !cmp.Equal(gotMap, test.wantMap) {
+				t.Fatalf("parseMetadataLabels(%s) = (%v) want (%v)", test.input, gotMap, test.wantMap)
+			}
+		})
 	}
 }
