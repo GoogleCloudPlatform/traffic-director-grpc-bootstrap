@@ -25,7 +25,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -77,7 +76,7 @@ func main() {
 		zone:               zone,
 		includeV3Features:  *includeV3Features,
 		includePSMSecurity: *includePSMSecurity,
-		ecsMetadataLabels:  nodeMetadata,
+		metadataLabels:     nodeMetadata,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
@@ -118,7 +117,7 @@ type configInput struct {
 	zone               string
 	includeV3Features  bool
 	includePSMSecurity bool
-	ecsMetadataLabels  map[string]string
+	metadataLabels     map[string]string
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -144,7 +143,7 @@ func generate(in configInput) ([]byte, error) {
 		},
 	}
 
-	for k, v := range in.ecsMetadataLabels {
+	for k, v := range in.metadataLabels {
 		c.Node.Metadata[k] = v
 	}
 	if in.includeV3Features {
@@ -241,24 +240,6 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 		return nil, fmt.Errorf("failed reading from metadata server: %w", err)
 	}
 	return body, nil
-}
-
-// Parse the comma separated list of labels specified on the command line as
-// part of the --ecs-metadata-labels flag into a map of key value pairs.
-func parseMetadataLabels(labels string) (map[string]string, error) {
-	if labels == "" {
-		return nil, nil
-	}
-	labelsMap := make(map[string]string)
-	parts := strings.Split(labels, ",")
-	for _, part := range parts {
-		kv := strings.Split(part, "=")
-		if len(kv) != 2 {
-			return nil, fmt.Errorf("Error: --ecs-metadata-labels field %q not formatted as a comma separated list of key-value pairs. Expected to be of the form k1=v1,k2=v2,k3=v3\n", labels)
-		}
-		labelsMap[kv[0]] = kv[1]
-	}
-	return labelsMap, nil
 }
 
 type config struct {

@@ -32,7 +32,7 @@ func newStringMapVal(m *map[string]string) *stringMapVal {
 func (s *stringMapVal) Set(val string) error {
 	parts := strings.SplitN(val, "=", 2)
 	if len(parts) != 2 {
-		return fmt.Errorf("flag value %q is not formatted as key=value", val)
+		return fmt.Errorf("%q is not formatted as key=value", val)
 	}
 	(*s)[parts[0]] = parts[1]
 	return nil
@@ -54,8 +54,4 @@ func (s *stringMapVal) String() string {
 		b.WriteString((*s)[key])
 	}
 	return b.String()
-}
-
-func (s *stringMapVal) Get() interface{} {
-	return map[string]string(*s)
 }

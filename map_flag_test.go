@@ -16,6 +16,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -60,6 +61,7 @@ func TestStringMapVal(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			sm := make(map[string]string)
 			fs := flag.NewFlagSet("testStringMapVal", flag.ContinueOnError)
+			fs.SetOutput(ioutil.Discard)
 			fs.Var(newStringMapVal(&sm), "metadata", "")
 
 			var cmdLine []string
