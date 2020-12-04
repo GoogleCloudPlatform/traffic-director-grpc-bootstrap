@@ -40,10 +40,12 @@ var (
 	localityZone       = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
 	includeV3Features  = flag.Bool("include-v3-features", false, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includePSMSecurity = flag.Bool("include-psm-security", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	ecsMetadataLabels  = flag.String("ecs-metadata-labels", "", "a comma separated list of key-value pairs (e.g., k1=v1,k2=v2) to specify endpoint config selector metadata labels. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
+	nodeMetadata := make(map[string]string)
+	flag.CommandLine.Var(newStringMapVal(&nodeMetadata), "node-metadata", "additional metadata of the form key=value to be included in the node configuration. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+
 	flag.Parse()
 	if *gcpProjectNumber == 0 {
 		var err error
@@ -67,11 +69,6 @@ func main() {
 			zone = ""
 		}
 	}
-	labelsMap, err := parseMetadataLabels(*ecsMetadataLabels)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
-	}
 	config, err := generate(configInput{
 		xdsServerUri:       *xdsServerUri,
 		gcpProjectNumber:   *gcpProjectNumber,
@@ -80,7 +77,7 @@ func main() {
 		zone:               zone,
 		includeV3Features:  *includeV3Features,
 		includePSMSecurity: *includePSMSecurity,
-		ecsMetadataLabels:  labelsMap,
+		ecsMetadataLabels:  nodeMetadata,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
