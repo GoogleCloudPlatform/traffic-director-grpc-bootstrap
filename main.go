@@ -37,13 +37,13 @@ var (
 		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
 	vpcNetworkName     = flag.String("vpc-network-name", "default", "VPC network name")
 	localityZone       = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
-	includeV3Features  = flag.Bool("include-v3-features", false, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includePSMSecurity = flag.Bool("include-psm-security", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeV3Features  = flag.Bool("include-v3-features-experimental", false, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includePSMSecurity = flag.Bool("include-psm-security-experimental", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
 	nodeMetadata := make(map[string]string)
-	flag.CommandLine.Var(newStringMapVal(&nodeMetadata), "node-metadata", "additional metadata of the form key=value to be included in the node configuration. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	flag.CommandLine.Var(newStringMapVal(&nodeMetadata), "node-metadata-experimental", "additional metadata of the form key=value to be included in the node configuration. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 
 	flag.Parse()
 	if *gcpProjectNumber == 0 {
