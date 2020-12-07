@@ -42,6 +42,9 @@ var (
 )
 
 func main() {
+	nodeMetadata := make(map[string]string)
+	flag.CommandLine.Var(newStringMapVal(&nodeMetadata), "node-metadata", "additional metadata of the form key=value to be included in the node configuration. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+
 	flag.Parse()
 	if *gcpProjectNumber == 0 {
 		var err error
@@ -73,6 +76,7 @@ func main() {
 		zone:               zone,
 		includeV3Features:  *includeV3Features,
 		includePSMSecurity: *includePSMSecurity,
+		metadataLabels:     nodeMetadata,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
@@ -113,6 +117,7 @@ type configInput struct {
 	zone               string
 	includeV3Features  bool
 	includePSMSecurity bool
+	metadataLabels     map[string]string
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -138,6 +143,9 @@ func generate(in configInput) ([]byte, error) {
 		},
 	}
 
+	for k, v := range in.metadataLabels {
+		c.Node.Metadata[k] = v
+	}
 	if in.includeV3Features {
 		// xDS v2 implementation in TD expects the projectNumber and networkName in
 		// the metadata field while the v3 implementation expects these in the id

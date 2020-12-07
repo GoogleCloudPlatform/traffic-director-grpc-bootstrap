@@ -40,6 +40,7 @@ func TestGenerate(t *testing.T) {
 				vpcNetworkName:   "thedefault",
 				ip:               "10.9.8.7",
 				zone:             "uscentral-5",
+				metadataLabels:   map[string]string{"k1": "v1", "k2": "v2"},
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -57,7 +58,9 @@ func TestGenerate(t *testing.T) {
     "cluster": "cluster",
     "metadata": {
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
+      "k1": "v1",
+      "k2": "v2"
     },
     "locality": {
       "zone": "uscentral-5"
