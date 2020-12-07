@@ -154,7 +154,7 @@ func generate(in configInput) ([]byte, error) {
 		// xDS v2 implementation in TD expects the IP address to be encoded in the
 		// id field while the v3 implementation expects this in the metadata.
 		c.Node.Metadata["INSTANCE_IP"] = in.ip
-		c.ServerFeatures = append(c.ServerFeatures, "xds_v3")
+		c.XdsServers[0].ServerFeatures = append(c.XdsServers[0].ServerFeatures, "xds_v3")
 	}
 	if in.includePSMSecurity {
 		c.CertificateProviders = map[string]certificateProviderConfig{
@@ -247,12 +247,12 @@ type config struct {
 	Node                     *node                                `json:"node,omitempty"`
 	CertificateProviders     map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
 	GRPCServerResourceNameID string                               `json:"grpc_server_resource_name_id,omitempty"`
-	ServerFeatures           []string                             `json:"server_features,omitempty"`
 }
 
 type server struct {
-	ServerUri    string  `json:"server_uri,omitempty"`
-	ChannelCreds []creds `json:"channel_creds,omitempty"`
+	ServerUri      string   `json:"server_uri,omitempty"`
+	ChannelCreds   []creds  `json:"channel_creds,omitempty"`
+	ServerFeatures []string `json:"server_features,omitempty"`
 }
 
 type creds struct {
