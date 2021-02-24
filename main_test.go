@@ -154,7 +154,7 @@ func TestGenerate(t *testing.T) {
       }
     }
   },
-  "grpc_server_resource_name_id": "grpc/server"
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
 }`,
 		},
 	}
