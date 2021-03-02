@@ -170,7 +170,7 @@ func generate(in configInput) ([]byte, error) {
 				},
 			},
 		}
-		c.GRPCServerResourceNameID = "grpc/server"
+		c.ServerListenerResourceNameTemplate = "grpc/server?xds.resource.listening_address=%s"
 	}
 
 	return json.MarshalIndent(c, "", "  ")
@@ -243,10 +243,10 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 }
 
 type config struct {
-	XdsServers               []server                             `json:"xds_servers,omitempty"`
-	Node                     *node                                `json:"node,omitempty"`
-	CertificateProviders     map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
-	GRPCServerResourceNameID string                               `json:"grpc_server_resource_name_id,omitempty"`
+	XdsServers                         []server                             `json:"xds_servers,omitempty"`
+	Node                               *node                                `json:"node,omitempty"`
+	CertificateProviders               map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
+	ServerListenerResourceNameTemplate string                               `json:"server_listener_resource_name_template,omitempty"`
 }
 
 type server struct {
