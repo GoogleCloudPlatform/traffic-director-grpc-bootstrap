@@ -33,49 +33,14 @@ func TestGenerate(t *testing.T) {
 		wantOutput string
 	}{
 		{
-			desc: "happy case",
-			input: configInput{
-				xdsServerUri:     "example.com:443",
-				gcpProjectNumber: 123456789012345,
-				vpcNetworkName:   "thedefault",
-				ip:               "10.9.8.7",
-				zone:             "uscentral-5",
-				metadataLabels:   map[string]string{"k1": "v1", "k2": "v2"},
-			},
-			wantOutput: `{
-  "xds_servers": [
-    {
-      "server_uri": "example.com:443",
-      "channel_creds": [
-        {
-          "type": "google_default"
-        }
-      ]
-    }
-  ],
-  "node": {
-    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
-    "cluster": "cluster",
-    "metadata": {
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
-      "k1": "v1",
-      "k2": "v2"
-    },
-    "locality": {
-      "zone": "uscentral-5"
-    }
-  }
-}`,
-		},
-		{
-			desc: "happy case with v3 config",
+			desc: "happy case with v3 config by default",
 			input: configInput{
 				xdsServerUri:      "example.com:443",
 				gcpProjectNumber:  123456789012345,
 				vpcNetworkName:    "thedefault",
 				ip:                "10.9.8.7",
 				zone:              "uscentral-5",
+				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
 				includeV3Features: true,
 			},
 			wantOutput: `{
@@ -98,6 +63,42 @@ func TestGenerate(t *testing.T) {
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
+      "k1": "v1",
+      "k2": "v2"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
+		{
+			desc: "happy case with v2 config",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				includeV3Features: false,
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ]
+    }
+  ],
+  "node": {
+    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
+    "cluster": "cluster",
+    "metadata": {
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
       "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
     },
     "locality": {
@@ -107,7 +108,7 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "happy case with v3 and security config",
+			desc: "happy case with security config",
 			input: configInput{
 				xdsServerUri:       "example.com:443",
 				gcpProjectNumber:   123456789012345,
