@@ -117,6 +117,7 @@ func TestGenerate(t *testing.T) {
 				zone:               "uscentral-5",
 				includeV3Features:  true,
 				includePSMSecurity: true,
+				secretsDir:         "/secrets/dir/",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -148,9 +149,9 @@ func TestGenerate(t *testing.T) {
     "google_cloud_private_spiffe": {
       "plugin_name": "file_watcher",
       "config": {
-        "certificate_file": "/var/run/gke-spiffe/certs/certificates.pem",
-        "private_key_file": "/var/run/gke-spiffe/certs/private_key.pem",
-        "ca_certificate_file": "/var/run/gke-spiffe/certs/ca_certificates.pem",
+        "certificate_file": "/secrets/dir/certificates.pem",
+        "private_key_file": "/secrets/dir/private_key.pem",
+        "ca_certificate_file": "/secrets/dir/ca_certificates.pem",
         "refresh_interval": "600s"
       }
     }
