@@ -39,7 +39,7 @@ var (
 	vpcNetworkName     = flag.String("vpc-network-name", "default", "VPC network name")
 	localityZone       = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
 	includeV3Features  = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includePSMSecurity = flag.Bool("include-psm-security-experimental", true, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includePSMSecurity = flag.Bool("include-psm-security-experimental", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	secretsDir         = flag.String("secrets-dir-experimental", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security. Used only if --include-psm-security-experimental is set. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
