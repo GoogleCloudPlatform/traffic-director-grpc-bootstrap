@@ -36,11 +36,16 @@ var (
 	outputName       = flag.String("output", "-", "output file name")
 	gcpProjectNumber = flag.Int64("gcp-project-number", 0,
 		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
-	vpcNetworkName     = flag.String("vpc-network-name", "default", "VPC network name")
-	localityZone       = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
-	includeV3Features  = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includePSMSecurity = flag.Bool("include-psm-security-experimental", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	secretsDir         = flag.String("secrets-dir-experimental", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security. Used only if --include-psm-security-experimental is set. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	vpcNetworkName        = flag.String("vpc-network-name", "default", "VPC network name")
+	localityZone          = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
+	includeV3Features     = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includePSMSecurity    = flag.Bool("include-psm-security-experimental", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	secretsDir            = flag.String("secrets-dir-experimental", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security. Used only if --include-psm-security-experimental is set. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeDeploymentInfo = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeClusterName        = flag.String("gke-cluster-name", "", "GKE cluster name to use, instead of retrieving it from the metadata server")
+	gkePodName            = flag.String("gke-pod-name", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file")
+	gkeNamespace          = flag.String("gke-namespace", "", "GKE namespace to use")
+	gcpVM                 = flag.String("gcp-vm", "", "GCP VM name to use, instead of reading it from the metadata server")
 )
 
 func main() {
@@ -70,6 +75,42 @@ func main() {
 			zone = ""
 		}
 	}
+
+	// Generate deployment info from metadata server or from command-line
+	// arguments, with the latter taking preference.
+	var deploymentInfo map[string]string
+	if *includeDeploymentInfo {
+		dType := getDeploymentType()
+		switch dType {
+		case deploymentTypeGKE:
+			cluster := *gkeClusterName
+			if cluster == "" {
+				cluster = getClusterName()
+			}
+			pod := *gkePodName
+			if pod == "" {
+				pod = getPodName()
+			}
+			deploymentInfo = map[string]string{
+				"GKE-CLUSTER":   cluster,
+				"GCP-ZONE":      zone,
+				"INSTANCE-IP":   ip,
+				"GKE-POD":       pod,
+				"GKE-NAMESPACE": *gkeNamespace,
+			}
+		case deploymentTypeGCE:
+			vmName := *gcpVM
+			if vmName == "" {
+				vmName = getVMName()
+			}
+			deploymentInfo = map[string]string{
+				"GCP-VM":      vmName,
+				"GCP-ZONE":    zone,
+				"INSTANCE-IP": ip,
+			}
+		}
+	}
+
 	config, err := generate(configInput{
 		xdsServerUri:       *xdsServerUri,
 		gcpProjectNumber:   *gcpProjectNumber,
@@ -80,6 +121,7 @@ func main() {
 		includePSMSecurity: *includePSMSecurity,
 		secretsDir:         *secretsDir,
 		metadataLabels:     nodeMetadata,
+		deploymentInfo:     deploymentInfo,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
@@ -122,6 +164,7 @@ type configInput struct {
 	includePSMSecurity bool
 	secretsDir         string
 	metadataLabels     map[string]string
+	deploymentInfo     map[string]string
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -140,7 +183,7 @@ func generate(in configInput) ([]byte, error) {
 			Locality: &locality{
 				Zone: in.zone,
 			},
-			Metadata: map[string]string{
+			Metadata: map[string]interface{}{
 				"TRAFFICDIRECTOR_NETWORK_NAME":       in.vpcNetworkName,
 				"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": strconv.FormatInt(in.gcpProjectNumber, 10),
 			},
@@ -175,6 +218,9 @@ func generate(in configInput) ([]byte, error) {
 			},
 		}
 		c.ServerListenerResourceNameTemplate = "grpc/server?xds.resource.listening_address=%s"
+	}
+	if in.deploymentInfo != nil {
+		c.Node.Metadata["TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT"] = in.deploymentInfo
 	}
 
 	return json.MarshalIndent(c, "", "  ")
@@ -217,6 +263,41 @@ func getProjectId() (int64, error) {
 		return 0, fmt.Errorf("could not parse project id from metadata server: %w", err)
 	}
 	return projectId, nil
+}
+
+func getClusterName() string {
+	cluster, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-name")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not discover GKE cluster name: %v", err)
+		return ""
+	}
+	return string(cluster)
+}
+
+// For overriding in unit tests.
+var readHostNameFile = func() ([]byte, error) {
+	return ioutil.ReadFile("/etc/hostname")
+}
+
+func getPodName() string {
+	if pod := os.Getenv("HOSTNAME"); pod != "" {
+		return pod
+	}
+	contents, err := readHostNameFile()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not discover GKE pod name: %v", err)
+		return ""
+	}
+	return string(contents)
+}
+
+func getVMName() string {
+	vm, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/name")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not discover GCE VM name: %v", err)
+		return ""
+	}
+	return string(vm)
 }
 
 func getFromMetadata(urlStr string) ([]byte, error) {
@@ -265,11 +346,11 @@ type creds struct {
 }
 
 type node struct {
-	Id           string            `json:"id,omitempty"`
-	Cluster      string            `json:"cluster,omitempty"`
-	Metadata     map[string]string `json:"metadata,omitempty"`
-	Locality     *locality         `json:"locality,omitempty"`
-	BuildVersion string            `json:"build_version,omitempty"`
+	Id           string                 `json:"id,omitempty"`
+	Cluster      string                 `json:"cluster,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	Locality     *locality              `json:"locality,omitempty"`
+	BuildVersion string                 `json:"build_version,omitempty"`
 }
 
 type locality struct {

@@ -16,10 +16,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -159,6 +161,60 @@ func TestGenerate(t *testing.T) {
   "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
 }`,
 		},
+		{
+			desc: "happy case with deployment info",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				includeV3Features: true,
+				deploymentInfo: map[string]string{
+					"GCP-ZONE":      "uscentral-5",
+					"GKE-CLUSTER":   "test-gke-cluster",
+					"GKE-NAMESPACE": "test-gke-namespace",
+					"GKE-POD":       "test-gke-pod",
+					"INSTANCE-IP":   "10.9.8.7",
+					"GKE-VM":        "test-gce-vm",
+				},
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "node": {
+    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
+      "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
+        "GCP-ZONE": "uscentral-5",
+        "GKE-CLUSTER": "test-gke-cluster",
+        "GKE-NAMESPACE": "test-gke-namespace",
+        "GKE-POD": "test-gke-pod",
+        "GKE-VM": "test-gce-vm",
+        "INSTANCE-IP": "10.9.8.7"
+      }
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
 	}
 
 	for _, test := range tests {
@@ -217,6 +273,98 @@ func TestGetProjectId(t *testing.T) {
 	}
 	if want != got {
 		t.Fatalf("want %v, got: %v", want, got)
+	}
+}
+
+func TestGetClusterName(t *testing.T) {
+	server := httptest.NewServer(nil)
+	defer server.Close()
+	overrideHTTP(server)
+	want := "test-cluster"
+	http.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-name",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Metadata-Flavor") != "Google" {
+				http.Error(w, "Missing Metadata-Flavor", 403)
+				return
+			}
+			w.Write([]byte("test-cluster"))
+		})
+	if got := getClusterName(); got != want {
+		t.Fatalf("getClusterName() = %s, want: %s", got, want)
+	}
+}
+
+func TestGetPodName(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(t *testing.T)
+		want  string
+	}{
+		{
+			name: "no-env-var-no-hostname-file",
+			setup: func(t *testing.T) {
+				if err := os.Setenv("HOSTNAME", ""); err != nil {
+					t.Fatalf("failed to set env var HOSTNAME: %v", err)
+				}
+				readHostNameFile = func() ([]byte, error) { return nil, errors.New("failed to read hostname file") }
+			},
+			want: "",
+		},
+		{
+			name: "no-env-var-valid-hostname-file-contents",
+			setup: func(t *testing.T) {
+				if err := os.Setenv("HOSTNAME", ""); err != nil {
+					t.Fatalf("failed to set env var HOSTNAME: %v", err)
+				}
+				readHostNameFile = func() ([]byte, error) { return []byte("test-hostname1"), nil }
+			},
+			want: "test-hostname1",
+		},
+		{
+			name: "valid-env-var",
+			setup: func(t *testing.T) {
+				if err := os.Setenv("HOSTNAME", "test-hostname2"); err != nil {
+					t.Fatalf("failed to set env var HOSTNAME: %v", err)
+				}
+				// To ensure that a valid env var is preferred over reading the file.
+				readHostNameFile = func() ([]byte, error) { return nil, errors.New("failed to read hostname file") }
+			},
+			want: "test-hostname2",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			oldHostNameEnvVar := os.Getenv("HOSTNAME")
+			oldReadHostNameFile := readHostNameFile
+			defer func() {
+				os.Setenv("HOSTNAME", oldHostNameEnvVar)
+				readHostNameFile = oldReadHostNameFile
+			}()
+
+			test.setup(t)
+			if got := getPodName(); got != test.want {
+				t.Fatalf("getPodName() = %s, want %s", got, test.want)
+			}
+		})
+	}
+}
+
+func TestGetVMName(t *testing.T) {
+	server := httptest.NewServer(nil)
+	defer server.Close()
+	overrideHTTP(server)
+	want := "test-vm"
+	http.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/name",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Metadata-Flavor") != "Google" {
+				http.Error(w, "Missing Metadata-Flavor", 403)
+				return
+			}
+			w.Write([]byte("test-vm"))
+		})
+	if got := getVMName(); got != want {
+		t.Fatalf("getVMName() = %s, want: %s", got, want)
 	}
 }
 
