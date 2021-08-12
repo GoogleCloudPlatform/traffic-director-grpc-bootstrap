@@ -280,15 +280,11 @@ var readHostNameFile = func() ([]byte, error) {
 }
 
 func getPodName() string {
-	if pod := os.Getenv("HOSTNAME"); pod != "" {
-		return pod
-	}
-	contents, err := readHostNameFile()
+	pod, err := os.Hostname()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not discover GKE pod name: %v", err)
-		return ""
 	}
-	return string(contents)
+	return pod
 }
 
 func getVMName() string {

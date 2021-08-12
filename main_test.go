@@ -16,12 +16,10 @@ package main
 
 import (
 	"context"
-	"errors"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -291,62 +289,6 @@ func TestGetClusterName(t *testing.T) {
 		})
 	if got := getClusterName(); got != want {
 		t.Fatalf("getClusterName() = %s, want: %s", got, want)
-	}
-}
-
-func TestGetPodName(t *testing.T) {
-	tests := []struct {
-		name  string
-		setup func(t *testing.T)
-		want  string
-	}{
-		{
-			name: "no-env-var-no-hostname-file",
-			setup: func(t *testing.T) {
-				if err := os.Setenv("HOSTNAME", ""); err != nil {
-					t.Fatalf("failed to set env var HOSTNAME: %v", err)
-				}
-				readHostNameFile = func() ([]byte, error) { return nil, errors.New("failed to read hostname file") }
-			},
-			want: "",
-		},
-		{
-			name: "no-env-var-valid-hostname-file-contents",
-			setup: func(t *testing.T) {
-				if err := os.Setenv("HOSTNAME", ""); err != nil {
-					t.Fatalf("failed to set env var HOSTNAME: %v", err)
-				}
-				readHostNameFile = func() ([]byte, error) { return []byte("test-hostname1"), nil }
-			},
-			want: "test-hostname1",
-		},
-		{
-			name: "valid-env-var",
-			setup: func(t *testing.T) {
-				if err := os.Setenv("HOSTNAME", "test-hostname2"); err != nil {
-					t.Fatalf("failed to set env var HOSTNAME: %v", err)
-				}
-				// To ensure that a valid env var is preferred over reading the file.
-				readHostNameFile = func() ([]byte, error) { return nil, errors.New("failed to read hostname file") }
-			},
-			want: "test-hostname2",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			oldHostNameEnvVar := os.Getenv("HOSTNAME")
-			oldReadHostNameFile := readHostNameFile
-			defer func() {
-				os.Setenv("HOSTNAME", oldHostNameEnvVar)
-				readHostNameFile = oldReadHostNameFile
-			}()
-
-			test.setup(t)
-			if got := getPodName(); got != test.want {
-				t.Fatalf("getPodName() = %s, want %s", got, test.want)
-			}
-		})
 	}
 }
 
