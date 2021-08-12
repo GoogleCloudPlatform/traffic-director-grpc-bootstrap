@@ -174,7 +174,7 @@ func TestGenerate(t *testing.T) {
 					"GKE-NAMESPACE": "test-gke-namespace",
 					"GKE-POD":       "test-gke-pod",
 					"INSTANCE-IP":   "10.9.8.7",
-					"GKE-VM":        "test-gce-vm",
+					"GCE-VM":        "test-gce-vm",
 				},
 			},
 			wantOutput: `{
@@ -199,11 +199,11 @@ func TestGenerate(t *testing.T) {
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
       "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
       "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
+        "GCE-VM": "test-gce-vm",
         "GCP-ZONE": "uscentral-5",
         "GKE-CLUSTER": "test-gke-cluster",
         "GKE-NAMESPACE": "test-gke-namespace",
         "GKE-POD": "test-gke-pod",
-        "GKE-VM": "test-gce-vm",
         "INSTANCE-IP": "10.9.8.7"
       }
     },

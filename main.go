@@ -42,10 +42,10 @@ var (
 	includePSMSecurity    = flag.Bool("include-psm-security-experimental", false, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	secretsDir            = flag.String("secrets-dir-experimental", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security. Used only if --include-psm-security-experimental is set. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeDeploymentInfo = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeClusterName        = flag.String("gke-cluster-name", "", "GKE cluster name to use, instead of retrieving it from the metadata server")
-	gkePodName            = flag.String("gke-pod-name", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file")
-	gkeNamespace          = flag.String("gke-namespace", "", "GKE namespace to use")
-	gcpVM                 = flag.String("gcp-vm", "", "GCP VM name to use, instead of reading it from the metadata server")
+	gkeClusterName        = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkePodName            = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeNamespace          = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gceVM                 = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -99,12 +99,12 @@ func main() {
 				"GKE-NAMESPACE": *gkeNamespace,
 			}
 		case deploymentTypeGCE:
-			vmName := *gcpVM
+			vmName := *gceVM
 			if vmName == "" {
 				vmName = getVMName()
 			}
 			deploymentInfo = map[string]string{
-				"GCP-VM":      vmName,
+				"GCE-VM":      vmName,
 				"GCP-ZONE":    zone,
 				"INSTANCE-IP": ip,
 			}
