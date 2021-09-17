@@ -213,6 +213,98 @@ func TestGenerate(t *testing.T) {
   }
 }`,
 		},
+		{
+			desc: "routerScope specified",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				includeV3Features: true,
+				deploymentInfo: map[string]string{
+					"GCP-ZONE":      "uscentral-5",
+					"GKE-CLUSTER":   "test-gke-cluster",
+					"GKE-NAMESPACE": "test-gke-namespace",
+					"GKE-POD":       "test-gke-pod",
+					"INSTANCE-IP":   "10.9.8.7",
+					"GCE-VM":        "test-gce-vm",
+				},
+				routerScope: "testscope",
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "node": {
+    "id": "projects/123456789012345/networks/scope:testscope/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
+      "TRAFFICDIRECTOR_SCOPE_NAME": "testscope",
+      "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
+        "GCE-VM": "test-gce-vm",
+        "GCP-ZONE": "uscentral-5",
+        "GKE-CLUSTER": "test-gke-cluster",
+        "GKE-NAMESPACE": "test-gke-namespace",
+        "GKE-POD": "test-gke-pod",
+        "INSTANCE-IP": "10.9.8.7"
+      }
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
+		{
+			desc: "routerScope specified with v2 config",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				includeV3Features: false,
+				routerScope:       "testscope",
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ]
+    }
+  ],
+  "node": {
+    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
+    "cluster": "cluster",
+    "metadata": {
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
+      "TRAFFICDIRECTOR_SCOPE_NAME": "testscope"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
 	}
 
 	for _, test := range tests {
