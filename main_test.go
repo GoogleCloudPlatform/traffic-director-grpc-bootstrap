@@ -214,7 +214,7 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "routerScope specified",
+			desc: "configScope specified",
 			input: configInput{
 				xdsServerUri:      "example.com:443",
 				gcpProjectNumber:  123456789012345,
@@ -230,7 +230,7 @@ func TestGenerate(t *testing.T) {
 					"INSTANCE-IP":   "10.9.8.7",
 					"GCE-VM":        "test-gce-vm",
 				},
-				routerScope: "testscope",
+				configScope: "testscope",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -270,7 +270,7 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "routerScope specified with v2 config",
+			desc: "configScope specified with v2 config",
 			input: configInput{
 				xdsServerUri:      "example.com:443",
 				gcpProjectNumber:  123456789012345,
@@ -278,7 +278,7 @@ func TestGenerate(t *testing.T) {
 				ip:                "10.9.8.7",
 				zone:              "uscentral-5",
 				includeV3Features: false,
-				routerScope:       "testscope",
+				configScope:       "testscope",
 			},
 			wantOutput: `{
   "xds_servers": [

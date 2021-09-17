@@ -46,7 +46,7 @@ var (
 	gkePodName            = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeNamespace          = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gceVM                 = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	routerScope           = flag.String("router-scope-experimental", "", "Scope name to use in conjunction with Router resources. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	configScope           = flag.String("config-scope-experimental", "", "Scope dictating which application networking configuration to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -123,7 +123,7 @@ func main() {
 		secretsDir:         *secretsDir,
 		metadataLabels:     nodeMetadata,
 		deploymentInfo:     deploymentInfo,
-		routerScope:        *routerScope,
+		configScope:        *configScope,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
@@ -167,7 +167,7 @@ type configInput struct {
 	secretsDir         string
 	metadataLabels     map[string]string
 	deploymentInfo     map[string]string
-	routerScope        string
+	configScope        string
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -193,8 +193,8 @@ func generate(in configInput) ([]byte, error) {
 		},
 	}
 
-	if in.routerScope != "" {
-		c.Node.Metadata["TRAFFICDIRECTOR_SCOPE_NAME"] = in.routerScope
+	if in.configScope != "" {
+		c.Node.Metadata["TRAFFICDIRECTOR_SCOPE_NAME"] = in.configScope
 	}
 
 	for k, v := range in.metadataLabels {
@@ -205,8 +205,8 @@ func generate(in configInput) ([]byte, error) {
 		// the metadata field while the v3 implementation expects these in the id
 		// field.
 		var networkIdentifier string
-		if in.routerScope != "" {
-			networkIdentifier = fmt.Sprintf("scope:%s", in.routerScope)
+		if in.configScope != "" {
+			networkIdentifier = fmt.Sprintf("scope:%s", in.configScope)
 		} else {
 			networkIdentifier = in.vpcNetworkName
 		}
