@@ -16,6 +16,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
@@ -25,6 +27,67 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 )
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		desc      string
+		input     configInput
+		wantError error
+	}{
+		{
+			desc: "fails when config-scope has too many characters",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
+				includeV3Features: true,
+				configScope:       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			},
+			wantError: errors.New("config-scope must not exceed 64 characters. Current length: 67\n"),
+		},
+		{
+			desc: "fails when config-scope does not start with an alphabetic letter",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
+				includeV3Features: true,
+				configScope:       "4foo",
+			},
+			wantError: errors.New("config-scope must begin with a letter\n"),
+		},
+		{
+			desc: "fails when config-scope contains characters besides letters, numbers, and hyphens.",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
+				includeV3Features: true,
+				configScope:       "h*x8",
+			},
+			wantError: errors.New("config-scope must only contain letters, numbers, or '-'. Found '*'.\n"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			validationErr := validate(test.input)
+			if fmt.Sprint(test.wantError) != fmt.Sprint(validationErr) {
+				diff := cmp.Diff(fmt.Sprint(test.wantError), fmt.Sprint(validationErr))
+				t.Fatalf("validate(%+v) returned output does not match expected (-want +got):\n%s", test.input, diff)
+			}
+		})
+	}
+}
 
 func TestGenerate(t *testing.T) {
 	tests := []struct {

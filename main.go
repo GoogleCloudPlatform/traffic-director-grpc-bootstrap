@@ -112,7 +112,7 @@ func main() {
 		}
 	}
 
-	config, err := generate(configInput{
+	input := configInput{
 		xdsServerUri:       *xdsServerUri,
 		gcpProjectNumber:   *gcpProjectNumber,
 		vpcNetworkName:     *vpcNetworkName,
@@ -124,7 +124,16 @@ func main() {
 		metadataLabels:     nodeMetadata,
 		deploymentInfo:     deploymentInfo,
 		configScope:        *configScope,
-	})
+	}
+
+	validationErr := validate(input)
+
+	if validationErr != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", validationErr)
+		os.Exit(1)
+	}
+
+	config, err := generate(input)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
 		os.Exit(1)
@@ -168,6 +177,36 @@ type configInput struct {
 	metadataLabels     map[string]string
 	deploymentInfo     map[string]string
 	configScope        string
+}
+
+func isLetter(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
+}
+
+func isNumber(b byte) bool {
+	return b >= '0' && b <= '9'
+}
+
+func validate(in configInput) error {
+	if in.configScope != "" {
+		maxLen := 64
+		configScopeLen := len(in.configScope)
+		if configScopeLen > maxLen {
+			return fmt.Errorf("config-scope must not exceed %d characters. Current length: %d\n", maxLen, configScopeLen)
+		}
+
+		if !isLetter(in.configScope[0]) {
+			return fmt.Errorf("config-scope must begin with a letter\n")
+		}
+
+		for i := 1; i < configScopeLen; i++ {
+			if !isLetter(in.configScope[i]) && !isNumber(in.configScope[i]) && in.configScope[i] != '-' {
+				return fmt.Errorf("config-scope must only contain letters, numbers, or '-'. Found '%c'.\n", in.configScope[i])
+			}
+		}
+	}
+
+	return nil
 }
 
 func generate(in configInput) ([]byte, error) {
