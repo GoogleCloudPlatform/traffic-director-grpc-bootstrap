@@ -181,8 +181,7 @@ type configInput struct {
 func validate(in configInput) error {
 	re := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-]{0,63}$`)
 	if in.configScope != "" && !re.MatchString(in.configScope) {
-		return fmt.Errorf("config-scope may only contain letters, numbers, and '-'. " +
-			"It must begin with a letter and must not exceed 64 characters in length")
+		return fmt.Errorf("config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length")
 	}
 
 	return nil

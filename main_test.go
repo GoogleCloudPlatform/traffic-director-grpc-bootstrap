@@ -16,12 +16,12 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -32,7 +32,7 @@ func TestValidate(t *testing.T) {
 	tests := []struct {
 		desc      string
 		input     configInput
-		wantError error
+		wantError string
 	}{
 		{
 			desc: "fails when config-scope has too many characters",
@@ -44,10 +44,9 @@ func TestValidate(t *testing.T) {
 				zone:              "uscentral-5",
 				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
 				includeV3Features: true,
-				configScope:       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				configScope:       strings.Repeat("a", 65),
 			},
-			wantError: errors.New("config-scope may only contain letters, numbers, and '-'. " +
-				"It must begin with a letter and must not exceed 64 characters in length"),
+			wantError: "config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
 		},
 		{
 			desc: "fails when config-scope does not start with an alphabetic letter",
@@ -61,8 +60,7 @@ func TestValidate(t *testing.T) {
 				includeV3Features: true,
 				configScope:       "4foo",
 			},
-			wantError: errors.New("config-scope may only contain letters, numbers, and '-'. " +
-				"It must begin with a letter and must not exceed 64 characters in length"),
+			wantError: "config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
 		},
 		{
 			desc: "fails when config-scope contains characters besides letters, numbers, and hyphens.",
@@ -76,17 +74,15 @@ func TestValidate(t *testing.T) {
 				includeV3Features: true,
 				configScope:       "h*x8",
 			},
-			wantError: errors.New("config-scope may only contain letters, numbers, and '-'. " +
-				"It must begin with a letter and must not exceed 64 characters in length"),
+			wantError: "config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			validationErr := validate(test.input)
-			if fmt.Sprint(test.wantError) != fmt.Sprint(validationErr) {
-				diff := cmp.Diff(fmt.Sprint(test.wantError), fmt.Sprint(validationErr))
-				t.Fatalf("validate(%+v) returned output does not match expected (-want +got):\n%s", test.input, diff)
+			err := validate(test.input)
+			if test.wantError != fmt.Sprint(err) {
+				t.Fatalf("validate(%+v) returned output does not match expected:\nWant: \"%s\"\nGot: \"%s\"", test.input, test.wantError, fmt.Sprint(err))
 			}
 		})
 	}
