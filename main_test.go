@@ -46,7 +46,8 @@ func TestValidate(t *testing.T) {
 				includeV3Features: true,
 				configScope:       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 			},
-			wantError: errors.New("config-scope must not exceed 64 characters. Current length: 67\n"),
+			wantError: errors.New("config-scope may only contain letters, numbers, and '-'. " +
+				"It must begin with a letter and must exceed 64 characters in length"),
 		},
 		{
 			desc: "fails when config-scope does not start with an alphabetic letter",
@@ -60,7 +61,8 @@ func TestValidate(t *testing.T) {
 				includeV3Features: true,
 				configScope:       "4foo",
 			},
-			wantError: errors.New("config-scope must begin with a letter\n"),
+			wantError: errors.New("config-scope may only contain letters, numbers, and '-'. " +
+				"It must begin with a letter and must exceed 64 characters in length"),
 		},
 		{
 			desc: "fails when config-scope contains characters besides letters, numbers, and hyphens.",
@@ -74,7 +76,8 @@ func TestValidate(t *testing.T) {
 				includeV3Features: true,
 				configScope:       "h*x8",
 			},
-			wantError: errors.New("config-scope must only contain letters, numbers, or '-'. Found '*'.\n"),
+			wantError: errors.New("config-scope may only contain letters, numbers, and '-'. " +
+				"It must begin with a letter and must exceed 64 characters in length"),
 		},
 	}
 

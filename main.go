@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -126,10 +127,8 @@ func main() {
 		configScope:        *configScope,
 	}
 
-	validationErr := validate(input)
-
-	if validationErr != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", validationErr)
+	if err := validate(input); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
 
@@ -179,31 +178,11 @@ type configInput struct {
 	configScope        string
 }
 
-func isLetter(b byte) bool {
-	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
-}
-
-func isNumber(b byte) bool {
-	return b >= '0' && b <= '9'
-}
-
 func validate(in configInput) error {
-	if in.configScope != "" {
-		maxLen := 64
-		configScopeLen := len(in.configScope)
-		if configScopeLen > maxLen {
-			return fmt.Errorf("config-scope must not exceed %d characters. Current length: %d\n", maxLen, configScopeLen)
-		}
-
-		if !isLetter(in.configScope[0]) {
-			return fmt.Errorf("config-scope must begin with a letter\n")
-		}
-
-		for i := 1; i < configScopeLen; i++ {
-			if !isLetter(in.configScope[i]) && !isNumber(in.configScope[i]) && in.configScope[i] != '-' {
-				return fmt.Errorf("config-scope must only contain letters, numbers, or '-'. Found '%c'.\n", in.configScope[i])
-			}
-		}
+	re := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-]{0,63}$`)
+	if in.configScope != "" && !re.MatchString(in.configScope) {
+		return fmt.Errorf("config-scope may only contain letters, numbers, and '-'. " +
+			"It must begin with a letter and must exceed 64 characters in length")
 	}
 
 	return nil
