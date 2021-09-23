@@ -221,12 +221,11 @@ func generate(in configInput) ([]byte, error) {
 		// xDS v2 implementation in TD expects the projectNumber and networkName in
 		// the metadata field while the v3 implementation expects these in the id
 		// field.
-		var networkIdentifier string
+		networkIdentifier := in.vpcNetworkName
 		if in.configScope != "" {
 			networkIdentifier = fmt.Sprintf("scope:%s", in.configScope)
-		} else {
-			networkIdentifier = in.vpcNetworkName
 		}
+
 		c.Node.Id = fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, networkIdentifier, uuid.New().String())
 		// xDS v2 implementation in TD expects the IP address to be encoded in the
 		// id field while the v3 implementation expects this in the metadata.
