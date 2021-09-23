@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
@@ -81,8 +80,8 @@ func TestValidate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			err := validate(test.input)
-			if test.wantError != fmt.Sprint(err) {
-				t.Fatalf("validate(%+v) returned output does not match expected:\nWant: \"%s\"\nGot: \"%s\"", test.input, test.wantError, fmt.Sprint(err))
+			if test.wantError != err.Error() {
+				t.Fatalf("validate(%+v) returned output does not match expected:\nGot: \"%v\"\nWant: \"%s\"", test.input, err.Error(), test.wantError)
 			}
 		})
 	}
