@@ -20,11 +20,72 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 )
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		desc      string
+		input     configInput
+		wantError string
+	}{
+		{
+			desc: "fails when config-scope has too many characters",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
+				includeV3Features: true,
+				configScope:       strings.Repeat("a", 65),
+			},
+			wantError: "config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
+		},
+		{
+			desc: "fails when config-scope does not start with an alphabetic letter",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
+				includeV3Features: true,
+				configScope:       "4foo",
+			},
+			wantError: "config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
+		},
+		{
+			desc: "fails when config-scope contains characters besides letters, numbers, and hyphens.",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
+				includeV3Features: true,
+				configScope:       "h*x8",
+			},
+			wantError: "config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			err := validate(test.input)
+			if test.wantError != err.Error() {
+				t.Fatalf("validate(%+v) returned output does not match expected:\nGot: \"%v\"\nWant: \"%s\"", test.input, err.Error(), test.wantError)
+			}
+		})
+	}
+}
 
 func TestGenerate(t *testing.T) {
 	tests := []struct {
@@ -206,6 +267,98 @@ func TestGenerate(t *testing.T) {
         "GKE-POD": "test-gke-pod",
         "INSTANCE-IP": "10.9.8.7"
       }
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
+		{
+			desc: "configScope specified",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				includeV3Features: true,
+				deploymentInfo: map[string]string{
+					"GCP-ZONE":      "uscentral-5",
+					"GKE-CLUSTER":   "test-gke-cluster",
+					"GKE-NAMESPACE": "test-gke-namespace",
+					"GKE-POD":       "test-gke-pod",
+					"INSTANCE-IP":   "10.9.8.7",
+					"GCE-VM":        "test-gce-vm",
+				},
+				configScope: "testscope",
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "node": {
+    "id": "projects/123456789012345/networks/scope:testscope/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
+      "TRAFFICDIRECTOR_SCOPE_NAME": "testscope",
+      "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
+        "GCE-VM": "test-gce-vm",
+        "GCP-ZONE": "uscentral-5",
+        "GKE-CLUSTER": "test-gke-cluster",
+        "GKE-NAMESPACE": "test-gke-namespace",
+        "GKE-POD": "test-gke-pod",
+        "INSTANCE-IP": "10.9.8.7"
+      }
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
+		{
+			desc: "configScope specified with v2 config",
+			input: configInput{
+				xdsServerUri:      "example.com:443",
+				gcpProjectNumber:  123456789012345,
+				vpcNetworkName:    "thedefault",
+				ip:                "10.9.8.7",
+				zone:              "uscentral-5",
+				includeV3Features: false,
+				configScope:       "testscope",
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ]
+    }
+  ],
+  "node": {
+    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
+    "cluster": "cluster",
+    "metadata": {
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
+      "TRAFFICDIRECTOR_SCOPE_NAME": "testscope"
     },
     "locality": {
       "zone": "uscentral-5"

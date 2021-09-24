@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -46,6 +47,7 @@ var (
 	gkePodName            = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeNamespace          = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gceVM                 = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	configScope           = flag.String("config-scope-experimental", "", "Scope dictating which application networking configuration to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -111,7 +113,7 @@ func main() {
 		}
 	}
 
-	config, err := generate(configInput{
+	input := configInput{
 		xdsServerUri:       *xdsServerUri,
 		gcpProjectNumber:   *gcpProjectNumber,
 		vpcNetworkName:     *vpcNetworkName,
@@ -122,7 +124,15 @@ func main() {
 		secretsDir:         *secretsDir,
 		metadataLabels:     nodeMetadata,
 		deploymentInfo:     deploymentInfo,
-	})
+		configScope:        *configScope,
+	}
+
+	if err := validate(input); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		os.Exit(1)
+	}
+
+	config, err := generate(input)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate config: %s\n", err)
 		os.Exit(1)
@@ -165,6 +175,16 @@ type configInput struct {
 	secretsDir         string
 	metadataLabels     map[string]string
 	deploymentInfo     map[string]string
+	configScope        string
+}
+
+func validate(in configInput) error {
+	re := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-]{0,63}$`)
+	if in.configScope != "" && !re.MatchString(in.configScope) {
+		return fmt.Errorf("config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length")
+	}
+
+	return nil
 }
 
 func generate(in configInput) ([]byte, error) {
@@ -190,6 +210,10 @@ func generate(in configInput) ([]byte, error) {
 		},
 	}
 
+	if in.configScope != "" {
+		c.Node.Metadata["TRAFFICDIRECTOR_SCOPE_NAME"] = in.configScope
+	}
+
 	for k, v := range in.metadataLabels {
 		c.Node.Metadata[k] = v
 	}
@@ -197,7 +221,12 @@ func generate(in configInput) ([]byte, error) {
 		// xDS v2 implementation in TD expects the projectNumber and networkName in
 		// the metadata field while the v3 implementation expects these in the id
 		// field.
-		c.Node.Id = fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, in.vpcNetworkName, uuid.New().String())
+		networkIdentifier := in.vpcNetworkName
+		if in.configScope != "" {
+			networkIdentifier = fmt.Sprintf("scope:%s", in.configScope)
+		}
+
+		c.Node.Id = fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, networkIdentifier, uuid.New().String())
 		// xDS v2 implementation in TD expects the IP address to be encoded in the
 		// id field while the v3 implementation expects this in the metadata.
 		c.Node.Metadata["INSTANCE_IP"] = in.ip
