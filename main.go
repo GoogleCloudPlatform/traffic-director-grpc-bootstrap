@@ -41,7 +41,7 @@ var (
 	localityZone          = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
 	includeV3Features     = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includePSMSecurity    = flag.Bool("include-psm-security-experimental", true, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	secretsDir            = flag.String("secrets-dir-experimental", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security. Used only if --include-psm-security-experimental is set. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	secretsDir            = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
 	includeDeploymentInfo = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeClusterName        = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkePodName            = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
@@ -52,7 +52,13 @@ var (
 
 func main() {
 	nodeMetadata := make(map[string]string)
-	flag.CommandLine.Var(newStringMapVal(&nodeMetadata), "node-metadata-experimental", "additional metadata of the form key=value to be included in the node configuration. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	flag.Var(newStringMapVal(&nodeMetadata), "node-metadata",
+		"additional metadata of the form key=value to be included in the node configuration")
+
+	flag.Var(flag.Lookup("secrets-dir").Value, "secrets-dir-experimental",
+		"alias of secrets-dir. This flag is EXPERIMENTAL and will be removed in a later release")
+	flag.Var(flag.Lookup("node-metadata").Value, "node-metadata-experimental",
+		"alias of node-metadata. This flag is EXPERIMENTAL and will be removed in a later release")
 
 	flag.Parse()
 	if *gcpProjectNumber == 0 {
