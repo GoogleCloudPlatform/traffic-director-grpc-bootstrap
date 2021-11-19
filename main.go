@@ -216,10 +216,6 @@ func generate(in configInput) ([]byte, error) {
 		},
 	}
 
-	if in.configScope != "" {
-		c.Node.Metadata["TRAFFICDIRECTOR_SCOPE_NAME"] = in.configScope
-	}
-
 	for k, v := range in.metadataLabels {
 		c.Node.Metadata[k] = v
 	}

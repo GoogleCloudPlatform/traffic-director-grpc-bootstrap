@@ -314,7 +314,6 @@ func TestGenerate(t *testing.T) {
       "INSTANCE_IP": "10.9.8.7",
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
       "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
-      "TRAFFICDIRECTOR_SCOPE_NAME": "testscope",
       "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
         "GCE-VM": "test-gce-vm",
         "GCP-ZONE": "uscentral-5",
@@ -357,8 +356,7 @@ func TestGenerate(t *testing.T) {
     "cluster": "cluster",
     "metadata": {
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
-      "TRAFFICDIRECTOR_SCOPE_NAME": "testscope"
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
     },
     "locality": {
       "zone": "uscentral-5"
