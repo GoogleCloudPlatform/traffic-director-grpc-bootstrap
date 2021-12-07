@@ -8,3 +8,11 @@ Traffic Director is available on the [Google Cloud
 website](https://cloud.google.com/traffic-director/).
 
 [gRFC A27]: https://github.com/grpc/proposal/blob/master/A27-xds-global-load-balancing.md
+
+## Public Docker Image
+
+Built Docker image is publicly available at Google Container Registry:
+gcr.io/trafficdirector-prod/td-grpc-bootstrap
+
+Please refer to the [GKE setup guide](https://cloud.google.com/traffic-director/docs/set-up-proxyless-gke)
+for more details.
