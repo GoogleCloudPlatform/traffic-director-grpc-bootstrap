@@ -34,7 +34,7 @@ func TestValidate(t *testing.T) {
 		wantError string
 	}{
 		{
-			desc: "fails when config-scope has too many characters",
+			desc: "fails when config-mesh has too many characters",
 			input: configInput{
 				xdsServerUri:      "example.com:443",
 				gcpProjectNumber:  123456789012345,
@@ -43,12 +43,12 @@ func TestValidate(t *testing.T) {
 				zone:              "uscentral-5",
 				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
 				includeV3Features: true,
-				configScope:       strings.Repeat("a", 65),
+				configMesh:        strings.Repeat("a", 65),
 			},
-			wantError: "config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
+			wantError: "config-mesh may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
 		},
 		{
-			desc: "fails when config-scope does not start with an alphabetic letter",
+			desc: "fails when config-mesh does not start with an alphabetic letter",
 			input: configInput{
 				xdsServerUri:      "example.com:443",
 				gcpProjectNumber:  123456789012345,
@@ -57,12 +57,12 @@ func TestValidate(t *testing.T) {
 				zone:              "uscentral-5",
 				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
 				includeV3Features: true,
-				configScope:       "4foo",
+				configMesh:        "4foo",
 			},
-			wantError: "config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
+			wantError: "config-mesh may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
 		},
 		{
-			desc: "fails when config-scope contains characters besides letters, numbers, and hyphens.",
+			desc: "fails when config-mesh contains characters besides letters, numbers, and hyphens.",
 			input: configInput{
 				xdsServerUri:      "example.com:443",
 				gcpProjectNumber:  123456789012345,
@@ -71,9 +71,9 @@ func TestValidate(t *testing.T) {
 				zone:              "uscentral-5",
 				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
 				includeV3Features: true,
-				configScope:       "h*x8",
+				configMesh:        "h*x8",
 			},
-			wantError: "config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
+			wantError: "config-mesh may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
 		},
 	}
 
@@ -275,7 +275,7 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "configScope specified",
+			desc: "configMesh specified",
 			input: configInput{
 				xdsServerUri:      "example.com:443",
 				gcpProjectNumber:  123456789012345,
@@ -291,7 +291,7 @@ func TestGenerate(t *testing.T) {
 					"INSTANCE-IP":   "10.9.8.7",
 					"GCE-VM":        "test-gce-vm",
 				},
-				configScope: "testscope",
+				configMesh: "testmesh",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -308,7 +308,7 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "node": {
-    "id": "projects/123456789012345/networks/scope:testscope/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "id": "projects/123456789012345/networks/mesh:testmesh/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
@@ -330,7 +330,7 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "configScope specified with v2 config",
+			desc: "configMesh specified with v2 config",
 			input: configInput{
 				xdsServerUri:      "example.com:443",
 				gcpProjectNumber:  123456789012345,
@@ -338,7 +338,7 @@ func TestGenerate(t *testing.T) {
 				ip:                "10.9.8.7",
 				zone:              "uscentral-5",
 				includeV3Features: false,
-				configScope:       "testscope",
+				configMesh:        "testmesh",
 			},
 			wantOutput: `{
   "xds_servers": [

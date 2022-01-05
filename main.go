@@ -47,7 +47,7 @@ var (
 	gkePodName            = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeNamespace          = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gceVM                 = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	configScope           = flag.String("config-scope-experimental", "", "Scope dictating which application networking configuration to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	configMesh            = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -130,7 +130,7 @@ func main() {
 		secretsDir:         *secretsDir,
 		metadataLabels:     nodeMetadata,
 		deploymentInfo:     deploymentInfo,
-		configScope:        *configScope,
+		configMesh:         *configMesh,
 	}
 
 	if err := validate(input); err != nil {
@@ -181,13 +181,13 @@ type configInput struct {
 	secretsDir         string
 	metadataLabels     map[string]string
 	deploymentInfo     map[string]string
-	configScope        string
+	configMesh         string
 }
 
 func validate(in configInput) error {
 	re := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-]{0,63}$`)
-	if in.configScope != "" && !re.MatchString(in.configScope) {
-		return fmt.Errorf("config-scope may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length")
+	if in.configMesh != "" && !re.MatchString(in.configMesh) {
+		return fmt.Errorf("config-mesh may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length")
 	}
 
 	return nil
@@ -224,8 +224,8 @@ func generate(in configInput) ([]byte, error) {
 		// the metadata field while the v3 implementation expects these in the id
 		// field.
 		networkIdentifier := in.vpcNetworkName
-		if in.configScope != "" {
-			networkIdentifier = fmt.Sprintf("scope:%s", in.configScope)
+		if in.configMesh != "" {
+			networkIdentifier = fmt.Sprintf("mesh:%s", in.configMesh)
 		}
 
 		c.Node.Id = fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, networkIdentifier, uuid.New().String())
