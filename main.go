@@ -48,6 +48,7 @@ var (
 	gkeNamespace          = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gceVM                 = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh            = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeFederation     = flag.Bool("include-federation-experimental", false, "whether or not to generate config to support federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -131,6 +132,7 @@ func main() {
 		metadataLabels:     nodeMetadata,
 		deploymentInfo:     deploymentInfo,
 		configMesh:         *configMesh,
+		includeFederation:  *includeFederation,
 	}
 
 	if err := validate(input); err != nil {
@@ -182,6 +184,7 @@ type configInput struct {
 	metadataLabels     map[string]string
 	deploymentInfo     map[string]string
 	configMesh         string
+	includeFederation  bool
 }
 
 func validate(in configInput) error {
@@ -252,6 +255,13 @@ func generate(in configInput) ([]byte, error) {
 	}
 	if in.deploymentInfo != nil {
 		c.Node.Metadata["TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT"] = in.deploymentInfo
+	}
+	if in.includeFederation {
+		// Add an entry to the authorities map with the empty string as key.
+		// New-style resource names without any authority will use this entry. The
+		// entry does not specify any "xds_servers", so the top-level "xds_servers"
+		// field will be used.
+		c.Authorities = map[string]authority{"": {}}
 	}
 
 	return json.MarshalIndent(c, "", "  ")
@@ -356,6 +366,7 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 
 type config struct {
 	XdsServers                         []server                             `json:"xds_servers,omitempty"`
+	Authorities                        map[string]authority                 `json:"authorities,omitempty"`
 	Node                               *node                                `json:"node,omitempty"`
 	CertificateProviders               map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
 	ServerListenerResourceNameTemplate string                               `json:"server_listener_resource_name_template,omitempty"`
@@ -365,6 +376,11 @@ type server struct {
 	ServerUri      string   `json:"server_uri,omitempty"`
 	ChannelCreds   []creds  `json:"channel_creds,omitempty"`
 	ServerFeatures []string `json:"server_features,omitempty"`
+}
+
+type authority struct {
+	ClientListenerResourceNameTemplate string   `json:"client_listener_resource_name_template,omitempty"`
+	XdsServers                         []server `json:"xds_servers,omitempty"`
 }
 
 type creds struct {
