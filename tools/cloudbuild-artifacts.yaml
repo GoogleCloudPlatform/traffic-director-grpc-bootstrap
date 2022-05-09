@@ -13,9 +13,9 @@
 # limitations under the License.
 
 steps:
-- name: golang:1.18-alpine
+- name: golang:1.18
   args: ['go', 'build', './...']
-- name: golang:1.18-alpine
+- name: golang:1.18
   args: ['go', 'test', './...']
 - name: alpine
   args: ['./tools/package.sh', '$COMMIT_SHA']
