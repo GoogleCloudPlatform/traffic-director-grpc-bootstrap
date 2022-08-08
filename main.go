@@ -39,6 +39,7 @@ var (
 		"the gcp project number. If unknown, can be found via 'gcloud projects list'")
 	vpcNetworkName        = flag.String("vpc-network-name", "default", "VPC network name")
 	localityZone          = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
+	ignoreDeletion        = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeV3Features     = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includePSMSecurity    = flag.Bool("include-psm-security-experimental", true, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	secretsDir            = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
@@ -125,6 +126,7 @@ func main() {
 		vpcNetworkName:     *vpcNetworkName,
 		ip:                 ip,
 		zone:               zone,
+		ignoreDeletion:     *ignoreDeletion,
 		includeV3Features:  *includeV3Features,
 		includePSMSecurity: *includePSMSecurity,
 		secretsDir:         *secretsDir,
@@ -176,6 +178,7 @@ type configInput struct {
 	vpcNetworkName     string
 	ip                 string
 	zone               string
+	ignoreDeletion     bool
 	includeV3Features  bool
 	includePSMSecurity bool
 	secretsDir         string
@@ -249,6 +252,9 @@ func generate(in configInput) ([]byte, error) {
 			},
 		}
 		c.ServerListenerResourceNameTemplate = "grpc/server?xds.resource.listening_address=%s"
+	}
+	if in.ignoreDeletion {
+		c.XdsServers[0].ServerFeatures = append(c.XdsServers[0].ServerFeatures, "ignore_resource_deletion")
 	}
 	if in.deploymentInfo != nil {
 		c.Node.Metadata["TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT"] = in.deploymentInfo
