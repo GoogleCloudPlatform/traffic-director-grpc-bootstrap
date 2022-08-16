@@ -364,6 +364,46 @@ func TestGenerate(t *testing.T) {
   }
 }`,
 		},
+		{
+			desc: "ignore_resource_deletion and v3",
+			input: configInput{
+				xdsServerUri:           "example.com:443",
+				gcpProjectNumber:       123456789012345,
+				vpcNetworkName:         "thedefault",
+				ip:                     "10.9.8.7",
+				zone:                   "uscentral-5",
+				ignoreResourceDeletion: true,
+				includeV3Features:      true,
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3",
+        "ignore_resource_deletion"
+      ]
+    }
+  ],
+  "node": {
+    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
 	}
 
 	for _, test := range tests {
