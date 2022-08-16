@@ -367,13 +367,13 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "ignore_resource_deletion and v3",
 			input: configInput{
-				xdsServerUri:      "example.com:443",
-				gcpProjectNumber:  123456789012345,
-				vpcNetworkName:    "thedefault",
-				ip:                "10.9.8.7",
-				zone:              "uscentral-5",
-				ignoreDeletion:    true,
-				includeV3Features: true,
+				xdsServerUri:           "example.com:443",
+				gcpProjectNumber:       123456789012345,
+				vpcNetworkName:         "thedefault",
+				ip:                     "10.9.8.7",
+				zone:                   "uscentral-5",
+				ignoreResourceDeletion: true,
+				includeV3Features:      true,
 			},
 			wantOutput: `{
   "xds_servers": [
