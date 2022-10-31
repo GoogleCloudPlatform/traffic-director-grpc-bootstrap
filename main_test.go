@@ -96,15 +96,14 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case with v3 config by default",
 			input: configInput{
-				xdsServerUri:      "example.com:443",
-				gcpProjectNumber:  123456789012345,
-				vpcNetworkName:    "thedefault",
-				ip:                "10.9.8.7",
-				zone:              "uscentral-5",
-				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
-				includeV3Features: true,
-				authorityName:     "xds.authority.com",
-				clientDefaultListenerResourceNameTemplate: "xdstp://xds.authority.com/envoy.config.listener.v3.Listener/%s",
+				xdsServerUri:         "example.com:443",
+				gcpProjectNumber:     123456789012345,
+				vpcNetworkName:       "thedefault",
+				ip:                   "10.9.8.7",
+				zone:                 "uscentral-5",
+				metadataLabels:       map[string]string{"k1": "v1", "k2": "v2"},
+				includeV3Features:    true,
+				includeXDSFederation: true,
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -121,7 +120,8 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "authorities": {
-    "xds.authority.com": {}
+    "": {},
+    "trafficdirector.googleapis.com:443": {}
   },
   "node": {
     "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
@@ -136,8 +136,7 @@ func TestGenerate(t *testing.T) {
     "locality": {
       "zone": "uscentral-5"
     }
-  },
-  "client_default_listener_resource_name_template": "xdstp://xds.authority.com/envoy.config.listener.v3.Listener/%s"
+  }
 }`,
 		},
 		{
