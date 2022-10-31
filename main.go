@@ -394,11 +394,6 @@ type creds struct {
 	Config interface{} `json:"config,omitempty"`
 }
 
-type authority struct {
-	ClientListenerResourceNameTemplate string   `json:"client_listener_resource_name_template,omitempty"`
-	XdsServers                         []server `json:"xds_servers,omitempty"`
-}
-
 type node struct {
 	Id           string                 `json:"id,omitempty"`
 	Cluster      string                 `json:"cluster,omitempty"`
