@@ -33,23 +33,22 @@ import (
 )
 
 var (
-	xdsServerUri                              = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
-	outputName                                = flag.String("output", "-", "output file name")
-	gcpProjectNumber                          = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
-	vpcNetworkName                            = flag.String("vpc-network-name", "default", "VPC network name")
-	localityZone                              = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
-	ignoreResourceDeletion                    = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includeV3Features                         = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includePSMSecurity                        = flag.Bool("include-psm-security-experimental", true, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	secretsDir                                = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
-	includeDeploymentInfo                     = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeClusterName                            = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkePodName                                = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeNamespace                              = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gceVM                                     = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	configMesh                                = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	authorityName                             = flag.String("authority-name-experimental", "", "Authority name to be used for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	clientDefaultListenerResourceNameTemplate = flag.String("client-default-listener-resource-name-template-experimental", "", "Client Default ListenerResourceName Template to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	xdsServerUri           = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
+	outputName             = flag.String("output", "-", "output file name")
+	gcpProjectNumber       = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
+	vpcNetworkName         = flag.String("vpc-network-name", "default", "VPC network name")
+	localityZone           = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
+	ignoreResourceDeletion = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeV3Features      = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includePSMSecurity     = flag.Bool("include-psm-security-experimental", true, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	secretsDir             = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
+	includeDeploymentInfo  = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeClusterName         = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkePodName             = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeNamespace           = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gceVM                  = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	configMesh             = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeXDSFederation   = flag.Bool("include-xds-federation-experimental", false, "whether or not to generate configs required for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -134,8 +133,7 @@ func main() {
 		metadataLabels:         nodeMetadata,
 		deploymentInfo:         deploymentInfo,
 		configMesh:             *configMesh,
-		authorityName:          *authorityName,
-		clientDefaultListenerResourceNameTemplate: *clientDefaultListenerResourceNameTemplate,
+		includeXDSFederation:   *includeXDSFederation,
 	}
 
 	if err := validate(input); err != nil {
@@ -176,20 +174,19 @@ func main() {
 }
 
 type configInput struct {
-	xdsServerUri                              string
-	gcpProjectNumber                          int64
-	vpcNetworkName                            string
-	ip                                        string
-	zone                                      string
-	ignoreResourceDeletion                    bool
-	includeV3Features                         bool
-	includePSMSecurity                        bool
-	secretsDir                                string
-	metadataLabels                            map[string]string
-	deploymentInfo                            map[string]string
-	configMesh                                string
-	authorityName                             string
-	clientDefaultListenerResourceNameTemplate string
+	xdsServerUri           string
+	gcpProjectNumber       int64
+	vpcNetworkName         string
+	ip                     string
+	zone                   string
+	ignoreResourceDeletion bool
+	includeV3Features      bool
+	includePSMSecurity     bool
+	secretsDir             string
+	metadataLabels         map[string]string
+	deploymentInfo         map[string]string
+	configMesh             string
+	includeXDSFederation   bool
 }
 
 func validate(in configInput) error {
@@ -265,14 +262,11 @@ func generate(in configInput) ([]byte, error) {
 		c.Node.Metadata["TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT"] = in.deploymentInfo
 	}
 
-	if in.authorityName != "" {
+	if in.includeXDSFederation {
 		c.Authorities = map[string]authority{
-			in.authorityName: {},
+			"trafficdirector.googleapis.com": {},
+			"":                               {},
 		}
-	}
-
-	if in.clientDefaultListenerResourceNameTemplate != "" {
-		c.ClientDefaultListenerResourceNameTemplate = in.clientDefaultListenerResourceNameTemplate
 	}
 
 	return json.MarshalIndent(c, "", "  ")
@@ -376,12 +370,11 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 }
 
 type config struct {
-	XdsServers                                []server                             `json:"xds_servers,omitempty"`
-	Authorities                               map[string]authority                 `json:"authorities,omitempty"`
-	Node                                      *node                                `json:"node,omitempty"`
-	CertificateProviders                      map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
-	ServerListenerResourceNameTemplate        string                               `json:"server_listener_resource_name_template,omitempty"`
-	ClientDefaultListenerResourceNameTemplate string                               `json:"client_default_listener_resource_name_template,omitempty"`
+	XdsServers                         []server                             `json:"xds_servers,omitempty"`
+	Authorities                        map[string]authority                 `json:"authorities,omitempty"`
+	Node                               *node                                `json:"node,omitempty"`
+	CertificateProviders               map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
+	ServerListenerResourceNameTemplate string                               `json:"server_listener_resource_name_template,omitempty"`
 }
 
 type server struct {
