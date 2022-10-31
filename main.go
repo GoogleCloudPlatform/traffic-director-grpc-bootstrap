@@ -267,7 +267,7 @@ func generate(in configInput) ([]byte, error) {
 	// Check for include XDS Federation flag to include Authorities in bootstrap config
 	if in.includeXDSFederation {
 		// both entries point to {} which is the top-level xds server config
-		c.Authorities = map[string]authority{
+		c.Authorities = map[string]struct{}{
 			// for new style resource names which explicitly specify TD
 			TdUri: {},
 			// for all new style resource names which contain no authority
@@ -377,7 +377,7 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 
 type config struct {
 	XdsServers                         []server                             `json:"xds_servers,omitempty"`
-	Authorities                        map[string]authority                 `json:"authorities,omitempty"`
+	Authorities                        map[string]struct{}                  `json:"authorities,omitempty"`
 	Node                               *node                                `json:"node,omitempty"`
 	CertificateProviders               map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
 	ServerListenerResourceNameTemplate string                               `json:"server_listener_resource_name_template,omitempty"`
