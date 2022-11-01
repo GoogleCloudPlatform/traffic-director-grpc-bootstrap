@@ -265,8 +265,9 @@ func generate(in configInput) ([]byte, error) {
 	}
 
 	if in.includeFederationSupport {
-		// Authorities with an empty server config will end up using the top-level server config.
-		// For more details, see: https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes.
+		// Authorities with an empty server config will end up using
+		// the top-level server config. For more details, see:
+		// https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes.
 		c.Authorities = map[string]struct{}{
 			tdURI: {},
 			"":    {},

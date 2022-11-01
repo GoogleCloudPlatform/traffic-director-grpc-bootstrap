@@ -404,7 +404,6 @@ func TestGenerate(t *testing.T) {
   }
 }`,
 		},
-
 		{
 			desc: "happy case with v3 defaults and federation support enabled",
 			input: configInput{
@@ -439,46 +438,6 @@ func TestGenerate(t *testing.T) {
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
-    },
-    "locality": {
-      "zone": "uscentral-5"
-    }
-  }
-}`,
-		},
-
-		{
-			desc: "happy case with v2 config and federation support enabled",
-			input: configInput{
-				xdsServerUri:             "example.com:443",
-				gcpProjectNumber:         123456789012345,
-				vpcNetworkName:           "thedefault",
-				ip:                       "10.9.8.7",
-				zone:                     "uscentral-5",
-				includeV3Features:        false,
-				includeFederationSupport: true,
-			},
-			wantOutput: `{
-  "xds_servers": [
-    {
-      "server_uri": "example.com:443",
-      "channel_creds": [
-        {
-          "type": "google_default"
-        }
-      ]
-    }
-  ],
-  "authorities": {
-    "": {},
-    "trafficdirector.googleapis.com:443": {}
-  },
-  "node": {
-    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
-    "cluster": "cluster",
-    "metadata": {
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
       "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
     },
