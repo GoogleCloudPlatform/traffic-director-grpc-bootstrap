@@ -277,7 +277,16 @@ func generate(in configInput) ([]byte, error) {
 			"":    {},
 		}
 		if in.includeC2PAuthority {
-			c.Authorities[c2pAuthority] = Authority{}
+			c.Authorities[c2pAuthority] = Authority{
+				XdsServers: []server{
+					{
+						ServerUri: "dns:///directpath-pa.googleapis.com",
+						ChannelCreds: []creds{
+							{Type: "google_default"},
+						},
+					},
+				},
+			}
 		}
 	}
 
@@ -395,9 +404,11 @@ type server struct {
 	ServerFeatures []string `json:"server_features,omitempty"`
 }
 
-// Authority
-// TODO: add struct implementation when we want to add custom authorities
-type Authority struct{}
+// Authority is the corresponding configuration to an authority name in the map.
+type Authority struct {
+	XdsServers                         []server `json:"xds_servers,omitempty"`
+	ClientListenerResourceNameTemplate string   `json:"client_listener_resource_name_template,omitempty"`
+}
 
 type creds struct {
 	Type   string      `json:"type,omitempty"`

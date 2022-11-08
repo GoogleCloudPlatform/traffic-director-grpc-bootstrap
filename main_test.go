@@ -447,6 +447,62 @@ func TestGenerate(t *testing.T) {
   }
 }`,
 		},
+		{
+			desc: "happy case with v3 defaults and federation support enabled and c2p authority included",
+			input: configInput{
+				xdsServerUri:             "example.com:443",
+				gcpProjectNumber:         123456789012345,
+				vpcNetworkName:           "thedefault",
+				ip:                       "10.9.8.7",
+				zone:                     "uscentral-5",
+				includeV3Features:        true,
+				includeFederationSupport: true,
+				includeC2PAuthority:      true,
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "authorities": {
+    "": {},
+    "traffic-director-c2p.xds.googleapis.com": {
+      "xds_servers": [
+        {
+          "server_uri": "dns:///directpath-pa.googleapis.com",
+          "channel_creds": [
+            {
+              "type": "google_default"
+            }
+          ]
+        }
+      ]
+    },
+    "trafficdirector.googleapis.com:443": {}
+  },
+  "node": {
+    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
 	}
 
 	for _, test := range tests {
