@@ -33,6 +33,7 @@ import (
 )
 
 const tdURI = "trafficdirector.googleapis.com:443"
+const c2pAuthority = "traffic-director-c2p.xds.googleapis.com"
 
 var (
 	xdsServerUri             = flag.String("xds-server-uri", tdURI, "override of server uri, for testing")
@@ -51,6 +52,7 @@ var (
 	gceVM                    = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh               = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeFederationSupport = flag.Bool("include-federation-support-experimental", false, "whether or not to generate configs required for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeC2PAuthority      = flag.Bool("include-c2p-authority-experimental", false, "whether or not to include c2p TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -136,6 +138,7 @@ func main() {
 		deploymentInfo:           deploymentInfo,
 		configMesh:               *configMesh,
 		includeFederationSupport: *includeFederationSupport,
+		includeC2PAuthority:      *includeC2PAuthority,
 	}
 
 	if err := validate(input); err != nil {
@@ -189,6 +192,7 @@ type configInput struct {
 	deploymentInfo           map[string]string
 	configMesh               string
 	includeFederationSupport bool
+	includeC2PAuthority      bool
 }
 
 func validate(in configInput) error {
@@ -268,9 +272,12 @@ func generate(in configInput) ([]byte, error) {
 		// Authorities with an empty server config will end up using
 		// the top-level server config. For more details, see:
 		// https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes.
-		c.Authorities = map[string]struct{}{
+		c.Authorities = map[string]Authority{
 			tdURI: {},
 			"":    {},
+		}
+		if in.includeC2PAuthority {
+			c.Authorities[c2pAuthority] = Authority{}
 		}
 	}
 
@@ -376,7 +383,7 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 
 type config struct {
 	XdsServers                         []server                             `json:"xds_servers,omitempty"`
-	Authorities                        map[string]struct{}                  `json:"authorities,omitempty"`
+	Authorities                        map[string]Authority                 `json:"authorities,omitempty"`
 	Node                               *node                                `json:"node,omitempty"`
 	CertificateProviders               map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
 	ServerListenerResourceNameTemplate string                               `json:"server_listener_resource_name_template,omitempty"`
@@ -387,6 +394,10 @@ type server struct {
 	ChannelCreds   []creds  `json:"channel_creds,omitempty"`
 	ServerFeatures []string `json:"server_features,omitempty"`
 }
+
+// Authority
+// TODO: add struct implementation when we want to add custom authorities
+type Authority struct{}
 
 type creds struct {
 	Type   string      `json:"type,omitempty"`
