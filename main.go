@@ -141,6 +141,7 @@ func main() {
 		configMesh:                 *configMesh,
 		includeFederationSupport:   *includeFederationSupport,
 		includeDirectPathAuthority: *includeDirectPathAuthority,
+		ipv6Capable:                isIPv6Capable(),
 	}
 
 	if err := validate(input); err != nil {
@@ -195,6 +196,7 @@ type configInput struct {
 	configMesh                 string
 	includeFederationSupport   bool
 	includeDirectPathAuthority bool
+	ipv6Capable                bool
 }
 
 func validate(in configInput) error {
@@ -274,6 +276,9 @@ func generate(in configInput) ([]byte, error) {
 					generateServerConfigFromInput("dns:///directpath-pa.googleapis.com", in),
 				},
 			}
+			if in.ipv6Capable {
+				c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
+			}
 		}
 	}
 
@@ -350,6 +355,15 @@ func getVMName() string {
 	return string(vm)
 }
 
+// isIPv6Capable. Retrieve IPv6 address (if any) from metadata server to check
+// for DirectPath IPv6 capability.
+func isIPv6Capable() bool {
+	if _, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s"); err == nil {
+		return true
+	}
+	return false
+}
+
 func getFromMetadata(urlStr string) ([]byte, error) {
 	parsedUrl, err := url.Parse(urlStr)
 	if err != nil {
@@ -405,29 +419,6 @@ func generateServerConfigFromInput(serverUri string, in configInput) server {
 		s.ServerFeatures = append(s.ServerFeatures, "ignore_resource_deletion")
 	}
 
-	return s
-}
-
-func (s server) withURI(su string) server {
-	s.ServerUri = su
-	return s
-}
-
-func serverWithDefaultChannelCreds() server {
-	var s server
-	s.ChannelCreds = []creds{
-		{Type: "google-default"},
-	}
-	return s
-}
-
-func (s server) withServerFeaturesFromInput(in configInput) server {
-	if in.includeV3Features {
-		s.ServerFeatures = append(s.ServerFeatures, "xds_v3")
-	}
-	if in.ignoreResourceDeletion {
-		s.ServerFeatures = append(s.ServerFeatures, "ignore_resource_deletion")
-	}
 	return s
 }
 

@@ -458,6 +458,7 @@ func TestGenerate(t *testing.T) {
 				includeV3Features:          true,
 				includeFederationSupport:   true,
 				includeDirectPathAuthority: true,
+				ipv6Capable:                true,
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -497,6 +498,7 @@ func TestGenerate(t *testing.T) {
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true,
       "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
       "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
     },
@@ -600,6 +602,24 @@ func TestGetVMName(t *testing.T) {
 		})
 	if got := getVMName(); got != want {
 		t.Fatalf("getVMName() = %s, want: %s", got, want)
+	}
+}
+
+func TestCheckIPv6Capable(t *testing.T) {
+	server := httptest.NewServer(nil)
+	defer server.Close()
+	overrideHTTP(server)
+	want := true
+	http.HandleFunc("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Metadata-Flavor") != "Google" {
+				http.Error(w, "Missing Metadata-Flavor", 403)
+				return
+			}
+			w.Write([]byte("6970:7636:2061:6464:7265:7373:2062:6162"))
+		})
+	if got := isIPv6Capable(); got != want {
+		t.Fatalf("isIPv6Capable() = %t, want: %t", got, want)
 	}
 }
 
