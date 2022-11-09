@@ -450,14 +450,14 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case with v3 defaults and federation support enabled and c2p authority included",
 			input: configInput{
-				xdsServerUri:             "example.com:443",
-				gcpProjectNumber:         123456789012345,
-				vpcNetworkName:           "thedefault",
-				ip:                       "10.9.8.7",
-				zone:                     "uscentral-5",
-				includeV3Features:        true,
-				includeFederationSupport: true,
-				includeC2PAuthority:      true,
+				xdsServerUri:               "example.com:443",
+				gcpProjectNumber:           123456789012345,
+				vpcNetworkName:             "thedefault",
+				ip:                         "10.9.8.7",
+				zone:                       "uscentral-5",
+				includeV3Features:          true,
+				includeFederationSupport:   true,
+				includeDirectPathAuthority: true,
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -483,6 +483,9 @@ func TestGenerate(t *testing.T) {
             {
               "type": "google_default"
             }
+          ],
+          "server_features": [
+            "xds_v3"
           ]
         }
       ]
