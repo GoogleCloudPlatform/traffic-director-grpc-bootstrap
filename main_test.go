@@ -606,21 +606,46 @@ func TestGetVMName(t *testing.T) {
 }
 
 func TestCheckIPv6Capable(t *testing.T) {
+	tests := []struct {
+		desc        string
+		httpHandler func(http.ResponseWriter, *http.Request)
+		wantOutput  bool
+	}{
+		{
+			desc: "case with check on ipv6 enabled host",
+			httpHandler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Metadata-Flavor") != "Google" {
+					http.Error(w, "Missing Metadata-Flavor", 403)
+					return
+				}
+				w.Write([]byte("6970:7636:2061:6464:7265:7373:2062:6162"))
+			},
+			wantOutput: true,
+		},
+		{
+			desc: "case with check on non ipv6 host",
+			httpHandler: func(w http.ResponseWriter, r *http.Request) {
+				http.Error(w, "Not Found", 404)
+				return
+			},
+			wantOutput: false,
+		},
+	}
 	server := httptest.NewServer(nil)
 	defer server.Close()
 	overrideHTTP(server)
-	want := true
-	http.HandleFunc("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s",
-		func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("Metadata-Flavor") != "Google" {
-				http.Error(w, "Missing Metadata-Flavor", 403)
-				return
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			uuid.SetRand(rand.New(rand.NewSource(1)))
+			http.DefaultServeMux = new(http.ServeMux)
+			http.HandleFunc("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s", test.httpHandler)
+			want := true
+			if got := isIPv6Capable(); got != want {
+				t.Fatalf("isIPv6Capable() = %t, want: %t", got, want)
 			}
-			w.Write([]byte("6970:7636:2061:6464:7265:7373:2062:6162"))
 		})
-	if got := isIPv6Capable(); got != want {
-		t.Fatalf("isIPv6Capable() = %t, want: %t", got, want)
 	}
+
 }
 
 func overrideHTTP(s *httptest.Server) {

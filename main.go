@@ -210,9 +210,7 @@ func validate(in configInput) error {
 
 func generate(in configInput) ([]byte, error) {
 	c := &config{
-		XdsServers: []server{
-			generateServerConfigFromInput(in.xdsServerUri, in),
-		},
+		XdsServers: generateServerConfigsFromInputs([]string{in.xdsServerUri}, in),
 		Node: &node{
 			Id:      uuid.New().String() + "~" + in.ip,
 			Cluster: "cluster", // unused by TD
@@ -272,9 +270,7 @@ func generate(in configInput) ([]byte, error) {
 		}
 		if in.includeDirectPathAuthority {
 			c.Authorities[c2pAuthority] = Authority{
-				XdsServers: []server{
-					generateServerConfigFromInput("dns:///directpath-pa.googleapis.com", in),
-				},
+				XdsServers: generateServerConfigsFromInputs([]string{"dns:///directpath-pa.googleapis.com"}, in),
 			}
 			if in.ipv6Capable {
 				c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
@@ -358,10 +354,8 @@ func getVMName() string {
 // isIPv6Capable. Retrieve IPv6 address (if any) from metadata server to check
 // for DirectPath IPv6 capability.
 func isIPv6Capable() bool {
-	if _, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s"); err == nil {
-		return true
-	}
-	return false
+	_, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s")
+	return err == nil
 }
 
 func getFromMetadata(urlStr string) ([]byte, error) {
@@ -405,21 +399,25 @@ type server struct {
 	ServerFeatures []string `json:"server_features,omitempty"`
 }
 
-func generateServerConfigFromInput(serverUri string, in configInput) server {
-	s := server{
-		ServerUri: serverUri,
-		ChannelCreds: []creds{
-			{Type: "google_default"},
-		},
-	}
-	if in.includeV3Features {
-		s.ServerFeatures = append(s.ServerFeatures, "xds_v3")
-	}
-	if in.ignoreResourceDeletion {
-		s.ServerFeatures = append(s.ServerFeatures, "ignore_resource_deletion")
+func generateServerConfigsFromInputs(serverUris []string, in configInput) []server {
+	var ss []server
+	for _, su := range serverUris {
+		s := server{
+			ServerUri: su,
+			ChannelCreds: []creds{
+				{Type: "google_default"},
+			},
+		}
+		if in.includeV3Features {
+			s.ServerFeatures = append(s.ServerFeatures, "xds_v3")
+		}
+		if in.ignoreResourceDeletion {
+			s.ServerFeatures = append(s.ServerFeatures, "ignore_resource_deletion")
+		}
+		ss = append(ss, s)
 	}
 
-	return s
+	return ss
 }
 
 // Authority is the configuration corresponding to an authority name in the map.
