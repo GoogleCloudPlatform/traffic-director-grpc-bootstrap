@@ -631,13 +631,14 @@ func TestCheckIPv6Capable(t *testing.T) {
 			wantOutput: false,
 		},
 	}
-	server := httptest.NewServer(nil)
-	defer server.Close()
-	overrideHTTP(server)
+
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			http.DefaultServeMux = new(http.ServeMux)
-			http.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s", test.httpHandler)
+			mux := new(http.ServeMux)
+			mux.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s", test.httpHandler)
+			server := httptest.NewServer(mux)
+			defer server.Close()
+			overrideHTTP(server)
 			if got := isIPv6Capable(); got != test.wantOutput {
 				t.Fatalf("isIPv6Capable() = %t, want: %t", got, test.wantOutput)
 			}

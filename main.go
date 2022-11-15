@@ -210,7 +210,7 @@ func validate(in configInput) error {
 
 func generate(in configInput) ([]byte, error) {
 	c := &config{
-		XdsServers: generateServerConfigsFromInputs([]string{in.xdsServerUri}, in),
+		XdsServers: generateServerConfigsFromInputs(in.xdsServerUri, in),
 		Node: &node{
 			Id:      uuid.New().String() + "~" + in.ip,
 			Cluster: "cluster", // unused by TD
@@ -270,7 +270,7 @@ func generate(in configInput) ([]byte, error) {
 		}
 		if in.includeDirectPathAuthority {
 			c.Authorities[c2pAuthority] = Authority{
-				XdsServers: generateServerConfigsFromInputs([]string{"dns:///directpath-pa.googleapis.com"}, in),
+				XdsServers: generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
 			}
 			if in.ipv6Capable {
 				c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
@@ -351,8 +351,8 @@ func getVMName() string {
 	return string(vm)
 }
 
-// isIPv6Capable. Retrieve IPv6 address (if any) from metadata server to check
-// for DirectPath IPv6 capability.
+// isIPv6Capable returns true if the VM is configured with an IPv6 address.
+// This will contact the metadata server to retrieve this information.
 func isIPv6Capable() bool {
 	_, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s")
 	return err == nil
@@ -374,16 +374,16 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 		},
 	}
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
 	if err != nil {
 		return nil, fmt.Errorf("failed communicating with metadata server: %w", err)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
 	if err != nil {
 		return nil, fmt.Errorf("failed reading from metadata server: %w", err)
 	}
-	if statusOk := resp.StatusCode >= 200 && resp.StatusCode < 300; !statusOk {
-		return nil, fmt.Errorf("failed reading from metadata server with Non-OK status code: %d", resp.StatusCode)
+	if code := resp.StatusCode; code < 200 || code > 299 {
+		return nil, fmt.Errorf("failed reading from metadata server with Non-OK status code: %d", code)
 	}
 	return body, nil
 }
@@ -402,25 +402,21 @@ type server struct {
 	ServerFeatures []string `json:"server_features,omitempty"`
 }
 
-func generateServerConfigsFromInputs(serverUris []string, in configInput) []server {
-	var ss []server
-	for _, su := range serverUris {
-		s := server{
-			ServerUri: su,
-			ChannelCreds: []creds{
-				{Type: "google_default"},
-			},
-		}
-		if in.includeV3Features {
-			s.ServerFeatures = append(s.ServerFeatures, "xds_v3")
-		}
-		if in.ignoreResourceDeletion {
-			s.ServerFeatures = append(s.ServerFeatures, "ignore_resource_deletion")
-		}
-		ss = append(ss, s)
+func generateServerConfigsFromInputs(serverUri string, in configInput) []server {
+	s := server{
+		ServerUri: serverUri,
+		ChannelCreds: []creds{
+			{Type: "google_default"},
+		},
+	}
+	if in.includeV3Features {
+		s.ServerFeatures = append(s.ServerFeatures, "xds_v3")
+	}
+	if in.ignoreResourceDeletion {
+		s.ServerFeatures = append(s.ServerFeatures, "ignore_resource_deletion")
 	}
 
-	return ss
+	return []server{s}
 }
 
 // Authority is the configuration corresponding to an authority name in the map.
