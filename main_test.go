@@ -634,7 +634,7 @@ func TestCheckIPv6Capable(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			mux := new(http.ServeMux)
+			mux := http.NewServeMux()
 			mux.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s", test.httpHandler)
 			server := httptest.NewServer(mux)
 			defer server.Close()
