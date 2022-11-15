@@ -374,13 +374,16 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 		},
 	}
 	resp, err := client.Do(req)
+	defer resp.Body.Close()
 	if err != nil {
 		return nil, fmt.Errorf("failed communicating with metadata server: %w", err)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
 	if err != nil {
 		return nil, fmt.Errorf("failed reading from metadata server: %w", err)
+	}
+	if statusOk := resp.StatusCode >= 200 && resp.StatusCode < 300; !statusOk {
+		return nil, fmt.Errorf("failed reading from metadata server with Non-OK status code: %d", resp.StatusCode)
 	}
 	return body, nil
 }
@@ -425,8 +428,7 @@ func generateServerConfigsFromInputs(serverUris []string, in configInput) []serv
 // For more details, see:
 // https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes
 type Authority struct {
-	XdsServers                         []server `json:"xds_servers,omitempty"`
-	ClientListenerResourceNameTemplate string   `json:"client_listener_resource_name_template,omitempty"`
+	XdsServers []server `json:"xds_servers,omitempty"`
 }
 
 type creds struct {
