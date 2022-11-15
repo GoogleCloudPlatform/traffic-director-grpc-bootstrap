@@ -383,7 +383,7 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 		return nil, fmt.Errorf("failed reading from metadata server: %w", err)
 	}
 	if code := resp.StatusCode; code < 200 || code > 299 {
-		return nil, fmt.Errorf("failed reading from metadata server with Non-OK status code: %d", code)
+		return nil, fmt.Errorf("metadata server returned status code %d for url %q", code, parsedUrl)
 	}
 	return body, nil
 }
