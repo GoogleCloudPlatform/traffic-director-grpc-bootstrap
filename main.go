@@ -32,25 +32,29 @@ import (
 	"github.com/google/uuid"
 )
 
-const tdURI = "trafficdirector.googleapis.com:443"
+const (
+	tdURI        = "trafficdirector.googleapis.com:443"
+	c2pAuthority = "traffic-director-c2p.xds.googleapis.com"
+)
 
 var (
-	xdsServerUri             = flag.String("xds-server-uri", tdURI, "override of server uri, for testing")
-	outputName               = flag.String("output", "-", "output file name")
-	gcpProjectNumber         = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
-	vpcNetworkName           = flag.String("vpc-network-name", "default", "VPC network name")
-	localityZone             = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
-	ignoreResourceDeletion   = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includeV3Features        = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includePSMSecurity       = flag.Bool("include-psm-security-experimental", true, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	secretsDir               = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
-	includeDeploymentInfo    = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeClusterName           = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkePodName               = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeNamespace             = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gceVM                    = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	configMesh               = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includeFederationSupport = flag.Bool("include-federation-support-experimental", false, "whether or not to generate configs required for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	xdsServerUri               = flag.String("xds-server-uri", tdURI, "override of server uri, for testing")
+	outputName                 = flag.String("output", "-", "output file name")
+	gcpProjectNumber           = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
+	vpcNetworkName             = flag.String("vpc-network-name", "default", "VPC network name")
+	localityZone               = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
+	ignoreResourceDeletion     = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeV3Features          = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includePSMSecurity         = flag.Bool("include-psm-security-experimental", true, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	secretsDir                 = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
+	includeDeploymentInfo      = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeClusterName             = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkePodName                 = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeNamespace               = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeFederationSupport   = flag.Bool("include-federation-support-experimental", false, "whether or not to generate configs required for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", false, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -123,19 +127,21 @@ func main() {
 	}
 
 	input := configInput{
-		xdsServerUri:             *xdsServerUri,
-		gcpProjectNumber:         *gcpProjectNumber,
-		vpcNetworkName:           *vpcNetworkName,
-		ip:                       ip,
-		zone:                     zone,
-		ignoreResourceDeletion:   *ignoreResourceDeletion,
-		includeV3Features:        *includeV3Features,
-		includePSMSecurity:       *includePSMSecurity,
-		secretsDir:               *secretsDir,
-		metadataLabels:           nodeMetadata,
-		deploymentInfo:           deploymentInfo,
-		configMesh:               *configMesh,
-		includeFederationSupport: *includeFederationSupport,
+		xdsServerUri:               *xdsServerUri,
+		gcpProjectNumber:           *gcpProjectNumber,
+		vpcNetworkName:             *vpcNetworkName,
+		ip:                         ip,
+		zone:                       zone,
+		ignoreResourceDeletion:     *ignoreResourceDeletion,
+		includeV3Features:          *includeV3Features,
+		includePSMSecurity:         *includePSMSecurity,
+		secretsDir:                 *secretsDir,
+		metadataLabels:             nodeMetadata,
+		deploymentInfo:             deploymentInfo,
+		configMesh:                 *configMesh,
+		includeFederationSupport:   *includeFederationSupport,
+		includeDirectPathAuthority: *includeDirectPathAuthority,
+		ipv6Capable:                isIPv6Capable(),
 	}
 
 	if err := validate(input); err != nil {
@@ -176,19 +182,21 @@ func main() {
 }
 
 type configInput struct {
-	xdsServerUri             string
-	gcpProjectNumber         int64
-	vpcNetworkName           string
-	ip                       string
-	zone                     string
-	ignoreResourceDeletion   bool
-	includeV3Features        bool
-	includePSMSecurity       bool
-	secretsDir               string
-	metadataLabels           map[string]string
-	deploymentInfo           map[string]string
-	configMesh               string
-	includeFederationSupport bool
+	xdsServerUri               string
+	gcpProjectNumber           int64
+	vpcNetworkName             string
+	ip                         string
+	zone                       string
+	ignoreResourceDeletion     bool
+	includeV3Features          bool
+	includePSMSecurity         bool
+	secretsDir                 string
+	metadataLabels             map[string]string
+	deploymentInfo             map[string]string
+	configMesh                 string
+	includeFederationSupport   bool
+	includeDirectPathAuthority bool
+	ipv6Capable                bool
 }
 
 func validate(in configInput) error {
@@ -202,14 +210,7 @@ func validate(in configInput) error {
 
 func generate(in configInput) ([]byte, error) {
 	c := &config{
-		XdsServers: []server{
-			{
-				ServerUri: in.xdsServerUri,
-				ChannelCreds: []creds{
-					{Type: "google_default"},
-				},
-			},
-		},
+		XdsServers: generateServerConfigsFromInputs(in.xdsServerUri, in),
 		Node: &node{
 			Id:      uuid.New().String() + "~" + in.ip,
 			Cluster: "cluster", // unused by TD
@@ -239,7 +240,6 @@ func generate(in configInput) ([]byte, error) {
 		// xDS v2 implementation in TD expects the IP address to be encoded in the
 		// id field while the v3 implementation expects this in the metadata.
 		c.Node.Metadata["INSTANCE_IP"] = in.ip
-		c.XdsServers[0].ServerFeatures = append(c.XdsServers[0].ServerFeatures, "xds_v3")
 	}
 	if in.includePSMSecurity {
 		c.CertificateProviders = map[string]certificateProviderConfig{
@@ -257,20 +257,24 @@ func generate(in configInput) ([]byte, error) {
 		}
 		c.ServerListenerResourceNameTemplate = "grpc/server?xds.resource.listening_address=%s"
 	}
-	if in.ignoreResourceDeletion {
-		c.XdsServers[0].ServerFeatures = append(c.XdsServers[0].ServerFeatures, "ignore_resource_deletion")
-	}
 	if in.deploymentInfo != nil {
 		c.Node.Metadata["TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT"] = in.deploymentInfo
 	}
-
 	if in.includeFederationSupport {
 		// Authorities with an empty server config will end up using
 		// the top-level server config. For more details, see:
 		// https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes.
-		c.Authorities = map[string]struct{}{
+		c.Authorities = map[string]Authority{
 			tdURI: {},
 			"":    {},
+		}
+		if in.includeDirectPathAuthority {
+			c.Authorities[c2pAuthority] = Authority{
+				XdsServers: generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
+			}
+			if in.ipv6Capable {
+				c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
+			}
 		}
 	}
 
@@ -347,6 +351,13 @@ func getVMName() string {
 	return string(vm)
 }
 
+// isIPv6Capable returns true if the VM is configured with an IPv6 address.
+// This will contact the metadata server to retrieve this information.
+func isIPv6Capable() bool {
+	_, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s")
+	return err == nil
+}
+
 func getFromMetadata(urlStr string) ([]byte, error) {
 	parsedUrl, err := url.Parse(urlStr)
 	if err != nil {
@@ -371,12 +382,15 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed reading from metadata server: %w", err)
 	}
+	if code := resp.StatusCode; code < 200 || code > 299 {
+		return nil, fmt.Errorf("metadata server returned status code %d for url %q", code, parsedUrl)
+	}
 	return body, nil
 }
 
 type config struct {
 	XdsServers                         []server                             `json:"xds_servers,omitempty"`
-	Authorities                        map[string]struct{}                  `json:"authorities,omitempty"`
+	Authorities                        map[string]Authority                 `json:"authorities,omitempty"`
 	Node                               *node                                `json:"node,omitempty"`
 	CertificateProviders               map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
 	ServerListenerResourceNameTemplate string                               `json:"server_listener_resource_name_template,omitempty"`
@@ -386,6 +400,31 @@ type server struct {
 	ServerUri      string   `json:"server_uri,omitempty"`
 	ChannelCreds   []creds  `json:"channel_creds,omitempty"`
 	ServerFeatures []string `json:"server_features,omitempty"`
+}
+
+func generateServerConfigsFromInputs(serverUri string, in configInput) []server {
+	s := server{
+		ServerUri: serverUri,
+		ChannelCreds: []creds{
+			{Type: "google_default"},
+		},
+	}
+	if in.includeV3Features {
+		s.ServerFeatures = append(s.ServerFeatures, "xds_v3")
+	}
+	if in.ignoreResourceDeletion {
+		s.ServerFeatures = append(s.ServerFeatures, "ignore_resource_deletion")
+	}
+
+	return []server{s}
+}
+
+// Authority is the configuration corresponding to an authority name in the map.
+//
+// For more details, see:
+// https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes
+type Authority struct {
+	XdsServers []server `json:"xds_servers,omitempty"`
 }
 
 type creds struct {

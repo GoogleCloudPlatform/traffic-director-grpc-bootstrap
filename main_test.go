@@ -447,6 +447,67 @@ func TestGenerate(t *testing.T) {
   }
 }`,
 		},
+		{
+			desc: "happy case with v3 defaults and federation support enabled and c2p authority included",
+			input: configInput{
+				xdsServerUri:               "example.com:443",
+				gcpProjectNumber:           123456789012345,
+				vpcNetworkName:             "thedefault",
+				ip:                         "10.9.8.7",
+				zone:                       "uscentral-5",
+				includeV3Features:          true,
+				includeFederationSupport:   true,
+				includeDirectPathAuthority: true,
+				ipv6Capable:                true,
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "authorities": {
+    "": {},
+    "traffic-director-c2p.xds.googleapis.com": {
+      "xds_servers": [
+        {
+          "server_uri": "dns:///directpath-pa.googleapis.com",
+          "channel_creds": [
+            {
+              "type": "google_default"
+            }
+          ],
+          "server_features": [
+            "xds_v3"
+          ]
+        }
+      ]
+    },
+    "trafficdirector.googleapis.com:443": {}
+  },
+  "node": {
+    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true,
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
 	}
 
 	for _, test := range tests {
@@ -542,6 +603,49 @@ func TestGetVMName(t *testing.T) {
 	if got := getVMName(); got != want {
 		t.Fatalf("getVMName() = %s, want: %s", got, want)
 	}
+}
+
+func TestCheckIPv6Capable(t *testing.T) {
+	tests := []struct {
+		desc        string
+		httpHandler func(http.ResponseWriter, *http.Request)
+		wantOutput  bool
+	}{
+		{
+			desc: "v6 enabled",
+			httpHandler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Metadata-Flavor") != "Google" {
+					http.Error(w, "Missing Metadata-Flavor", 403)
+					return
+				}
+				w.Write([]byte("6970:7636:2061:6464:7265:7373:2062:6162"))
+			},
+			wantOutput: true,
+		},
+		{
+			desc: "v6 not enabled",
+			httpHandler: func(w http.ResponseWriter, r *http.Request) {
+				http.Error(w, "Not Found", 404)
+				return
+			},
+			wantOutput: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			mux := http.NewServeMux()
+			mux.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ipv6s", test.httpHandler)
+			server := httptest.NewServer(mux)
+			defer server.Close()
+			overrideHTTP(server)
+			if got := isIPv6Capable(); got != test.wantOutput {
+				t.Fatalf("isIPv6Capable() = %t, want: %t", got, test.wantOutput)
+			}
+
+		})
+	}
+
 }
 
 func overrideHTTP(s *httptest.Server) {
