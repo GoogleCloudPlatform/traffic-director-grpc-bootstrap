@@ -277,8 +277,7 @@ func generate(in configInput) ([]byte, error) {
 				XdsServers: generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
 			}
 			if in.includeXDSTPNameInLDS {
-				template := fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority)
-				authority.ClientListenerResourceNameTemplate = template
+				authority.ClientListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority)
 			}
 			c.Authorities[c2pAuthority] = authority
 			if in.ipv6Capable {
