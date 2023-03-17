@@ -56,7 +56,7 @@ var (
 	includeFederationSupport   = flag.Bool("include-federation-support-experimental", false, "whether or not to generate configs required for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", false, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	// TODO: default to true when TD supports xdstp style names.
-	includeXDSTPNameInLDS = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use XDSTP name for . Ignored if not used with both include-federation-support-experimental and include-directpath-authority-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeXDSTPNameInLDS = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use XDSTP style name for listener resource name template. Ignored if not used with both include-federation-support-experimental and include-directpath-authority-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -144,6 +144,7 @@ func main() {
 		includeFederationSupport:   *includeFederationSupport,
 		includeDirectPathAuthority: *includeDirectPathAuthority,
 		ipv6Capable:                isIPv6Capable(),
+		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
 	}
 
 	if err := validate(input); err != nil {
