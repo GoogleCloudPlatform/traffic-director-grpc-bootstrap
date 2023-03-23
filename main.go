@@ -34,6 +34,7 @@ import (
 
 const (
 	tdURI        = "trafficdirector.googleapis.com:443"
+	tdAuthority  = "traffic-director-global.xds.googleapis.com"
 	c2pAuthority = "traffic-director-c2p.xds.googleapis.com"
 )
 
@@ -277,7 +278,7 @@ func generate(in configInput) ([]byte, error) {
 				XdsServers: generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
 			}
 			if in.includeXDSTPNameInLDS {
-				authority.ClientListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority)
+				authority.ClientListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority)
 			}
 			c.Authorities[c2pAuthority] = authority
 			if in.ipv6Capable {
