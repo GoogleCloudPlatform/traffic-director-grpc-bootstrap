@@ -277,10 +277,9 @@ func generate(in configInput) ([]byte, error) {
 			c.ClientListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority)
 		}
 		if in.includeDirectPathAuthority {
-			authority := Authority{
+			c.Authorities[c2pAuthority] = Authority{
 				XdsServers: generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
 			}
-			c.Authorities[c2pAuthority] = authority
 			if in.ipv6Capable {
 				c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
 			}
