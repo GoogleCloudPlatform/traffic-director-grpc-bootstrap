@@ -57,7 +57,7 @@ var (
 	includeFederationSupport   = flag.Bool("include-federation-support-experimental", false, "whether or not to generate configs required for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", false, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	// TODO: default to true when TD supports xdstp style names.
-	includeXDSTPNameInLDS = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use XDSTP style name for listener resource name template. Ignored if not used with both include-federation-support-experimental and include-directpath-authority-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeXDSTPNameInLDS = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use XDSTP style name for listener resource name template. Ignored if not used with both include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -273,12 +273,12 @@ func generate(in configInput) ([]byte, error) {
 			tdURI: {},
 			"":    {},
 		}
+		if in.includeXDSTPNameInLDS {
+			c.ClientListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority)
+		}
 		if in.includeDirectPathAuthority {
 			authority := Authority{
 				XdsServers: generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
-			}
-			if in.includeXDSTPNameInLDS {
-				authority.ClientListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority)
 			}
 			c.Authorities[c2pAuthority] = authority
 			if in.ipv6Capable {
@@ -403,6 +403,7 @@ type config struct {
 	Node                               *node                                `json:"node,omitempty"`
 	CertificateProviders               map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
 	ServerListenerResourceNameTemplate string                               `json:"server_listener_resource_name_template,omitempty"`
+	ClientListenerResourceNameTemplate string                               `json:"client_listener_resource_name_template,omitempty"`
 }
 
 type server struct {
@@ -433,8 +434,7 @@ func generateServerConfigsFromInputs(serverUri string, in configInput) []server 
 // For more details, see:
 // https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes
 type Authority struct {
-	XdsServers                         []server `json:"xds_servers,omitempty"`
-	ClientListenerResourceNameTemplate string   `json:"client_listener_resource_name_template,omitempty"`
+	XdsServers []server `json:"xds_servers,omitempty"`
 }
 
 type creds struct {
