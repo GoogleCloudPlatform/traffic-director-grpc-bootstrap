@@ -489,7 +489,8 @@ func TestGenerate(t *testing.T) {
             "xds_v3"
           ]
         }
-      ]
+      ],
+      "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     },
     "trafficdirector.googleapis.com:443": {}
   },

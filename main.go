@@ -270,7 +270,8 @@ func generate(in configInput) ([]byte, error) {
 		}
 		if in.includeDirectPathAuthority {
 			c.Authorities[c2pAuthority] = Authority{
-				XdsServers: generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
+				XdsServers:                         generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
+				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority),
 			}
 			if in.ipv6Capable {
 				c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
@@ -424,7 +425,8 @@ func generateServerConfigsFromInputs(serverUri string, in configInput) []server 
 // For more details, see:
 // https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes
 type Authority struct {
-	XdsServers []server `json:"xds_servers,omitempty"`
+	XdsServers                         []server `json:"xds_servers,omitempty"`
+	ClientListenerResourceNameTemplate string   `json:"client_listener_resource_name_template,omitempty"`
 }
 
 type creds struct {
