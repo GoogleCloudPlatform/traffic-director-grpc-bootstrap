@@ -509,7 +509,7 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "happy case with federation support, c2p authority, and xdstp name included",
+			desc: "happy case with federation support, c2p authority, and xdstp name flag included",
 			input: configInput{
 				xdsServerUri:               "example.com:443",
 				gcpProjectNumber:           123456789012345,
@@ -553,7 +553,9 @@ func TestGenerate(t *testing.T) {
         }
       ]
     },
-    "trafficdirector.googleapis.com:443": {}
+    "trafficdirector.googleapis.com:443": {
+      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+    }
   },
   "node": {
     "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
@@ -567,8 +569,7 @@ func TestGenerate(t *testing.T) {
     "locality": {
       "zone": "uscentral-5"
     }
-  },
-  "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+  }
 }`,
 		},
 	}

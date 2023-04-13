@@ -274,7 +274,10 @@ func generate(in configInput) ([]byte, error) {
 			"":    {},
 		}
 		if in.includeXDSTPNameInLDS {
-			c.ClientListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority)
+			if a, ok := c.Authorities[tdURI]; ok {
+				a.ClientListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority)
+				c.Authorities[tdURI] = a
+			}
 		}
 		if in.includeDirectPathAuthority {
 			c.Authorities[c2pAuthority] = Authority{
@@ -402,7 +405,6 @@ type config struct {
 	Node                               *node                                `json:"node,omitempty"`
 	CertificateProviders               map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
 	ServerListenerResourceNameTemplate string                               `json:"server_listener_resource_name_template,omitempty"`
-	ClientListenerResourceNameTemplate string                               `json:"client_listener_resource_name_template,omitempty"`
 }
 
 type server struct {
@@ -433,7 +435,8 @@ func generateServerConfigsFromInputs(serverUri string, in configInput) []server 
 // For more details, see:
 // https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes
 type Authority struct {
-	XdsServers []server `json:"xds_servers,omitempty"`
+	XdsServers                         []server `json:"xds_servers,omitempty"`
+	ClientListenerResourceNameTemplate string   `json:"client_listener_resource_name_template,omitempty"`
 }
 
 type creds struct {
