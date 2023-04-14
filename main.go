@@ -280,7 +280,8 @@ func generate(in configInput) ([]byte, error) {
 		}
 		if in.includeDirectPathAuthority {
 			c.Authorities[c2pAuthority] = Authority{
-				XdsServers: generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
+				XdsServers:                         generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
+				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority),
 			}
 			if in.ipv6Capable {
 				c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
