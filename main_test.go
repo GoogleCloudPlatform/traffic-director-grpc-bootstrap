@@ -448,9 +448,9 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "happy case with v3 defaults and federation support enabled and c2p authority included",
+			desc: "happy case federation support enabled and c2p authority included",
 			input: configInput{
-				xdsServerUri:               "example.com:443",
+				xdsServerUri:               "traffic-director-global.xds.googleapis.com",
 				gcpProjectNumber:           123456789012345,
 				vpcNetworkName:             "thedefault",
 				ip:                         "10.9.8.7",
@@ -463,7 +463,7 @@ func TestGenerate(t *testing.T) {
 			wantOutput: `{
   "xds_servers": [
     {
-      "server_uri": "example.com:443",
+      "server_uri": "traffic-director-global.xds.googleapis.com",
       "channel_creds": [
         {
           "type": "google_default"
@@ -491,7 +491,7 @@ func TestGenerate(t *testing.T) {
         }
       ]
     },
-    "trafficdirector.googleapis.com:443": {}
+    "traffic-director-global.xds.googleapis.com": {}
   },
   "node": {
     "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
@@ -509,9 +509,9 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "happy case with federation support, c2p authority, and xdstp name flag included",
+			desc: "happy case with federation support in directpath with new xdstp style name",
 			input: configInput{
-				xdsServerUri:               "example.com:443",
+				xdsServerUri:               "traffic-director-global.xds.googleapis.com",
 				gcpProjectNumber:           123456789012345,
 				vpcNetworkName:             "thedefault",
 				ip:                         "10.9.8.7",
@@ -525,7 +525,7 @@ func TestGenerate(t *testing.T) {
 			wantOutput: `{
   "xds_servers": [
     {
-      "server_uri": "example.com:443",
+      "server_uri": "traffic-director-global.xds.googleapis.com",
       "channel_creds": [
         {
           "type": "google_default"
@@ -553,7 +553,7 @@ func TestGenerate(t *testing.T) {
         }
       ]
     },
-    "trafficdirector.googleapis.com:443": {
+    "traffic-director-global.xds.googleapis.com": {
       "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     }
   },

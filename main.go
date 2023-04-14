@@ -33,13 +33,12 @@ import (
 )
 
 const (
-	tdURI        = "trafficdirector.googleapis.com:443"
 	tdAuthority  = "traffic-director-global.xds.googleapis.com"
 	c2pAuthority = "traffic-director-c2p.xds.googleapis.com"
 )
 
 var (
-	xdsServerUri               = flag.String("xds-server-uri", tdURI, "override of server uri, for testing")
+	xdsServerUri               = flag.String("xds-server-uri", tdAuthority, "override of server uri, for testing")
 	outputName                 = flag.String("output", "-", "output file name")
 	gcpProjectNumber           = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
 	vpcNetworkName             = flag.String("vpc-network-name", "default", "VPC network name")
@@ -270,13 +269,13 @@ func generate(in configInput) ([]byte, error) {
 		// the top-level server config. For more details, see:
 		// https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes.
 		c.Authorities = map[string]Authority{
-			tdURI: {},
-			"":    {},
+			tdAuthority: {},
+			"":          {},
 		}
 		if in.includeXDSTPNameInLDS {
-			if a, ok := c.Authorities[tdURI]; ok {
+			if a, ok := c.Authorities[tdAuthority]; ok {
 				a.ClientListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority)
-				c.Authorities[tdURI] = a
+				c.Authorities[tdAuthority] = a
 			}
 		}
 		if in.includeDirectPathAuthority {
