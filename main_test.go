@@ -450,7 +450,7 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case federation support enabled and c2p authority included",
 			input: configInput{
-				xdsServerUri:               "traffic-director-global.xds.googleapis.com",
+				xdsServerUri:               "example.com:443",
 				gcpProjectNumber:           123456789012345,
 				vpcNetworkName:             "thedefault",
 				ip:                         "10.9.8.7",
@@ -463,7 +463,7 @@ func TestGenerate(t *testing.T) {
 			wantOutput: `{
   "xds_servers": [
     {
-      "server_uri": "traffic-director-global.xds.googleapis.com",
+      "server_uri": "example.com:443",
       "channel_creds": [
         {
           "type": "google_default"
