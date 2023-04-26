@@ -270,13 +270,13 @@ func generate(in configInput) ([]byte, error) {
 		// the top-level server config. For more details, see:
 		// https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes.
 		c.Authorities = map[string]Authority{
-			tdAuthority: {},
-			"":          {},
+			tdURI: {},
+			"":    {},
 		}
 		if in.includeXDSTPNameInLDS {
-			if a, ok := c.Authorities[tdAuthority]; ok {
+			if a, ok := c.Authorities[tdURI]; ok {
 				a.ClientListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority)
-				c.Authorities[tdAuthority] = a
+				c.Authorities[tdURI] = a
 			}
 		}
 		if in.includeDirectPathAuthority {

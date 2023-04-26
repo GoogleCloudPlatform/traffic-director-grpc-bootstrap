@@ -431,7 +431,7 @@ func TestGenerate(t *testing.T) {
   ],
   "authorities": {
     "": {},
-    "traffic-director-global.xds.googleapis.com": {}
+    "trafficdirector.googleapis.com:443": {}
   },
   "node": {
     "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
@@ -492,7 +492,7 @@ func TestGenerate(t *testing.T) {
       ],
       "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     },
-    "traffic-director-global.xds.googleapis.com": {}
+    "trafficdirector.googleapis.com:443": {}
   },
   "node": {
     "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
@@ -512,7 +512,7 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case with federation support in directpath with new xdstp style name",
 			input: configInput{
-				xdsServerUri:               "traffic-director-global.xds.googleapis.com",
+				xdsServerUri:               "trafficdirector.googleapis.com:443",
 				gcpProjectNumber:           123456789012345,
 				vpcNetworkName:             "thedefault",
 				ip:                         "10.9.8.7",
@@ -526,7 +526,7 @@ func TestGenerate(t *testing.T) {
 			wantOutput: `{
   "xds_servers": [
     {
-      "server_uri": "traffic-director-global.xds.googleapis.com",
+      "server_uri": "trafficdirector.googleapis.com:443",
       "channel_creds": [
         {
           "type": "google_default"
@@ -555,7 +555,7 @@ func TestGenerate(t *testing.T) {
       ],
       "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     },
-    "traffic-director-global.xds.googleapis.com": {
+    "trafficdirector.googleapis.com:443": {
       "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     }
   },
