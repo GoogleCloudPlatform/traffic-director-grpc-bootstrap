@@ -448,7 +448,7 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "happy case federation support enabled and c2p authority included",
+			desc: "happy case with federation support enabled and c2p authority included",
 			input: configInput{
 				xdsServerUri:               "example.com:443",
 				gcpProjectNumber:           123456789012345,
@@ -555,7 +555,7 @@ func TestGenerate(t *testing.T) {
       ],
       "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     },
-    "trafficdirector.googleapis.com:443": {
+    "traffic-director-global.xds.googleapis.com": {
       "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     }
   },
