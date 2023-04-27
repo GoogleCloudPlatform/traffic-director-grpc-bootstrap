@@ -430,8 +430,7 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "authorities": {
-    "": {},
-    "trafficdirector.googleapis.com:443": {}
+    "": {}
   },
   "node": {
     "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
@@ -491,8 +490,7 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
-    },
-    "trafficdirector.googleapis.com:443": {}
+    }
   },
   "node": {
     "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",

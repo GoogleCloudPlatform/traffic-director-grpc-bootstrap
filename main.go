@@ -277,8 +277,6 @@ func generate(in configInput) ([]byte, error) {
 			c.Authorities[tdAuthority] = Authority{
 				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority),
 			}
-		} else {
-			c.Authorities[tdURI] = Authority{}
 		}
 
 		if in.includeDirectPathAuthority {
