@@ -34,6 +34,7 @@ import (
 
 const (
 	tdURI        = "trafficdirector.googleapis.com:443"
+	tdAuthority  = "traffic-director-global.xds.googleapis.com"
 	c2pAuthority = "traffic-director-c2p.xds.googleapis.com"
 )
 
@@ -55,6 +56,8 @@ var (
 	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeFederationSupport   = flag.Bool("include-federation-support-experimental", false, "whether or not to generate configs required for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", false, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	// TODO: default to true when TD supports xdstp style names.
+	includeXDSTPNameInLDS = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use XDSTP style name for listener resource name template. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -142,6 +145,7 @@ func main() {
 		includeFederationSupport:   *includeFederationSupport,
 		includeDirectPathAuthority: *includeDirectPathAuthority,
 		ipv6Capable:                isIPv6Capable(),
+		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
 	}
 
 	if err := validate(input); err != nil {
@@ -197,6 +201,7 @@ type configInput struct {
 	includeFederationSupport   bool
 	includeDirectPathAuthority bool
 	ipv6Capable                bool
+	includeXDSTPNameInLDS      bool
 }
 
 func validate(in configInput) error {
@@ -265,9 +270,15 @@ func generate(in configInput) ([]byte, error) {
 		// the top-level server config. For more details, see:
 		// https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes.
 		c.Authorities = map[string]Authority{
-			tdURI: {},
-			"":    {},
+			"": {},
 		}
+
+		if in.includeXDSTPNameInLDS {
+			c.Authorities[tdAuthority] = Authority{
+				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority),
+			}
+		}
+
 		if in.includeDirectPathAuthority {
 			c.Authorities[c2pAuthority] = Authority{
 				XdsServers:                         generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
