@@ -32,20 +32,13 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	tdURI        = "trafficdirector.googleapis.com:443"
-	c2pTdURI     = "dns:///directpath-pa.googleapis.com"
-	tdAuthority  = "traffic-director-global.xds.googleapis.com"
-	c2pAuthority = "traffic-director-c2p.xds.googleapis.com"
-)
-
 var (
-	xdsServerUri               = flag.String("xds-server-uri", tdURI, "override of server uri, for testing")
+	xdsServerUri               = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
 	outputName                 = flag.String("output", "-", "output file name")
 	gcpProjectNumber           = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
 	vpcNetworkName             = flag.String("vpc-network-name", "default", "VPC network name")
 	localityZone               = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
-	ignoreResourceDeletion     = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is only true for Google C2P (DirectPath) use-cases. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	ignoreResourceDeletion     = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeV3Features          = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includePSMSecurity         = flag.Bool("include-psm-security-experimental", true, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	secretsDir                 = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
@@ -215,8 +208,18 @@ func validate(in configInput) error {
 }
 
 func generate(in configInput) ([]byte, error) {
+	xdsServer := server{
+		ServerUri:    in.xdsServerUri,
+		ChannelCreds: []creds{{Type: "google_default"}},
+	}
+	if in.includeV3Features {
+		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3")
+	}
+	if in.ignoreResourceDeletion {
+		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "ignore_resource_deletion")
+	}
 	c := &config{
-		XdsServers: generateServerConfig(in.xdsServerUri, in.includeV3Features, in.ignoreResourceDeletion),
+		XdsServers: []server{xdsServer},
 		Node: &node{
 			Id:      uuid.New().String() + "~" + in.ip,
 			Cluster: "cluster", // unused by TD
@@ -275,16 +278,22 @@ func generate(in configInput) ([]byte, error) {
 		}
 
 		if in.includeXDSTPNameInLDS {
+			tdAuthority := "traffic-director-global.xds.googleapis.com"
 			c.Authorities[tdAuthority] = Authority{
 				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority),
 			}
 		}
 
 		if in.includeDirectPathAuthority {
+			c2pAuthority := "traffic-director-c2p.xds.googleapis.com"
 			c.Authorities[c2pAuthority] = Authority{
 				// In the case of DirectPath, it is safe to assume that the operator is notified of missing resources.
 				// In other words, "ignore_resource_deletion" server_features is always set.
-				XdsServers:                         generateServerConfig(c2pTdURI, in.includeV3Features, true),
+				XdsServers: []server{{
+					ServerUri:      "dns:///directpath-pa.googleapis.com",
+					ChannelCreds:   []creds{{Type: "google_default"}},
+					ServerFeatures: []string{"xds_v3", "ignore_resource_deletion"},
+				}},
 				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority),
 			}
 			if in.ipv6Capable {
@@ -415,23 +424,6 @@ type server struct {
 	ServerUri      string   `json:"server_uri,omitempty"`
 	ChannelCreds   []creds  `json:"channel_creds,omitempty"`
 	ServerFeatures []string `json:"server_features,omitempty"`
-}
-
-func generateServerConfig(serverUri string, includeV3Features bool, ignoreResourceDeletion bool) []server {
-	s := server{
-		ServerUri: serverUri,
-		ChannelCreds: []creds{
-			{Type: "google_default"},
-		},
-	}
-	if includeV3Features {
-		s.ServerFeatures = append(s.ServerFeatures, "xds_v3")
-	}
-	if ignoreResourceDeletion {
-		s.ServerFeatures = append(s.ServerFeatures, "ignore_resource_deletion")
-	}
-
-	return []server{s}
 }
 
 // Authority is the configuration corresponding to an authority name in the map.
