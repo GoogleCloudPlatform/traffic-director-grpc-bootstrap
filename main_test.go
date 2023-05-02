@@ -485,7 +485,8 @@ func TestGenerate(t *testing.T) {
             }
           ],
           "server_features": [
-            "xds_v3"
+            "xds_v3",
+            "ignore_resource_deletion"
           ]
         }
       ],
@@ -547,7 +548,8 @@ func TestGenerate(t *testing.T) {
             }
           ],
           "server_features": [
-            "xds_v3"
+            "xds_v3",
+            "ignore_resource_deletion"
           ]
         }
       ],
