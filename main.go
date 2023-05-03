@@ -32,14 +32,8 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	tdURI        = "trafficdirector.googleapis.com:443"
-	tdAuthority  = "traffic-director-global.xds.googleapis.com"
-	c2pAuthority = "traffic-director-c2p.xds.googleapis.com"
-)
-
 var (
-	xdsServerUri               = flag.String("xds-server-uri", tdURI, "override of server uri, for testing")
+	xdsServerUri               = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
 	outputName                 = flag.String("output", "-", "output file name")
 	gcpProjectNumber           = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
 	vpcNetworkName             = flag.String("vpc-network-name", "default", "VPC network name")
@@ -214,8 +208,18 @@ func validate(in configInput) error {
 }
 
 func generate(in configInput) ([]byte, error) {
+	xdsServer := server{
+		ServerUri:    in.xdsServerUri,
+		ChannelCreds: []creds{{Type: "google_default"}},
+	}
+	if in.includeV3Features {
+		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3")
+	}
+	if in.ignoreResourceDeletion {
+		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "ignore_resource_deletion")
+	}
 	c := &config{
-		XdsServers: generateServerConfigsFromInputs(in.xdsServerUri, in),
+		XdsServers: []server{xdsServer},
 		Node: &node{
 			Id:      uuid.New().String() + "~" + in.ip,
 			Cluster: "cluster", // unused by TD
@@ -274,14 +278,22 @@ func generate(in configInput) ([]byte, error) {
 		}
 
 		if in.includeXDSTPNameInLDS {
+			tdAuthority := "traffic-director-global.xds.googleapis.com"
 			c.Authorities[tdAuthority] = Authority{
 				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority),
 			}
 		}
 
 		if in.includeDirectPathAuthority {
+			c2pAuthority := "traffic-director-c2p.xds.googleapis.com"
 			c.Authorities[c2pAuthority] = Authority{
-				XdsServers:                         generateServerConfigsFromInputs("dns:///directpath-pa.googleapis.com", in),
+				// In the case of DirectPath, it is safe to assume that the operator is notified of missing resources.
+				// In other words, "ignore_resource_deletion" server_features is always set.
+				XdsServers: []server{{
+					ServerUri:      "dns:///directpath-pa.googleapis.com",
+					ChannelCreds:   []creds{{Type: "google_default"}},
+					ServerFeatures: []string{"xds_v3", "ignore_resource_deletion"},
+				}},
 				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority),
 			}
 			if in.ipv6Capable {
@@ -412,23 +424,6 @@ type server struct {
 	ServerUri      string   `json:"server_uri,omitempty"`
 	ChannelCreds   []creds  `json:"channel_creds,omitempty"`
 	ServerFeatures []string `json:"server_features,omitempty"`
-}
-
-func generateServerConfigsFromInputs(serverUri string, in configInput) []server {
-	s := server{
-		ServerUri: serverUri,
-		ChannelCreds: []creds{
-			{Type: "google_default"},
-		},
-	}
-	if in.includeV3Features {
-		s.ServerFeatures = append(s.ServerFeatures, "xds_v3")
-	}
-	if in.ignoreResourceDeletion {
-		s.ServerFeatures = append(s.ServerFeatures, "ignore_resource_deletion")
-	}
-
-	return []server{s}
 }
 
 // Authority is the configuration corresponding to an authority name in the map.
