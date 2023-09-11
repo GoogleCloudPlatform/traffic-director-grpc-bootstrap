@@ -15,7 +15,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"flag"
 	"math/rand"
 	"net"
 	"net/http"
@@ -85,6 +87,83 @@ func TestValidate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefault(t *testing.T) {
+	flag.Parse()
+	want := `{
+  "xds_servers": [
+    {
+      "server_uri": "trafficdirector.googleapis.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "authorities": {
+    "": {}
+  },
+  "node": {
+    "id": "projects/0/networks/default/nodes/31313131-3131-4131-b131-313131313131",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "127.0.0.1",
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "0",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "default"
+    },
+    "locality": {
+      "zone": "us-central-1"
+    }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "/var/run/secrets/workload-spiffe-credentials/certificates.pem",
+        "private_key_file": "/var/run/secrets/workload-spiffe-credentials/private_key.pem",
+        "ca_certificate_file": "/var/run/secrets/workload-spiffe-credentials/ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
+}`
+	input := configInput{
+		xdsServerUri:               *xdsServerUri,
+		gcpProjectNumber:           *gcpProjectNumber,
+		vpcNetworkName:             *vpcNetworkName,
+		ip:                         "127.0.0.1",
+		zone:                       "us-central-1",
+		ignoreResourceDeletion:     *ignoreResourceDeletion,
+		includeV3Features:          *includeV3Features,
+		includePSMSecurity:         *includePSMSecurity,
+		secretsDir:                 *secretsDir,
+		metadataLabels:             nil, /* node-metadata default is empty, hence nil map */
+		deploymentInfo:             nil, /* includeDeploymentInfo default is false, hence nil map */
+		configMesh:                 *configMesh,
+		includeFederationSupport:   *includeFederationSupport,
+		includeDirectPathAuthority: *includeDirectPathAuthority,
+		ipv6Capable:                isIPv6Capable(),
+		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
+	}
+	// Make UUID.New().String() deterministic.
+	reader := bytes.NewReader([]byte("11111111111111111111111111111111"))
+	uuid.SetRand(reader)
+	uuid.SetClockSequence(1)
+
+	got, err := generate(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(want, string(got)); diff != "" {
+		t.Fatalf("Default config generated does not match expected(-want +got): %v", diff)
+	}
+
 }
 
 func TestGenerate(t *testing.T) {
@@ -556,7 +635,7 @@ func TestGenerate(t *testing.T) {
       "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     },
     "traffic-director-global.xds.googleapis.com": {
-      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/thedefault/%s"
     }
   },
   "node": {
