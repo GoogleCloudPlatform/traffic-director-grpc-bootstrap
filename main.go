@@ -48,6 +48,7 @@ var (
 	gkeNamespace               = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	generateMeshId             = flag.Bool("generate-mesh-id", false, "whether or not to generate the mesh ID as per CSM GAMMA Mesh manual hashing algorithm. Usage of this flag requires gke-cluster-name-experimental to be set and config-mesh-experimental to be unset. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeFederationSupport   = flag.Bool("include-federation-support-experimental", true, "whether or not to generate configs required for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", false, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	// TODO: default to true when TD supports xdstp style names.
@@ -192,6 +193,8 @@ type configInput struct {
 	metadataLabels             map[string]string
 	deploymentInfo             map[string]string
 	configMesh                 string
+	generateMeshId             bool
+	gkeClusterName             string
 	includeFederationSupport   bool
 	includeDirectPathAuthority bool
 	ipv6Capable                bool
@@ -202,6 +205,14 @@ func validate(in configInput) error {
 	re := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-]{0,63}$`)
 	if in.configMesh != "" && !re.MatchString(in.configMesh) {
 		return fmt.Errorf("config-mesh may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length")
+	}
+
+	// If in.configMesh != "", then do not validate for generateMeshId constraints,
+	// since the value configMesh would be used as MeshID in generate()
+	if in.configMesh == "" && in.generateMeshId {
+		if in.gkeClusterName == "" {
+			return fmt.Errorf("gke-cluster-name-experimental has to be set while using generate-mesh-id")
+		}
 	}
 
 	return nil
@@ -236,8 +247,17 @@ func generate(in configInput) ([]byte, error) {
 	for k, v := range in.metadataLabels {
 		c.Node.Metadata[k] = v
 	}
-
 	networkIdentifier := in.vpcNetworkName
+	// Override networkIdentifier if in.generateMeshId is set.
+	if in.generateMeshId {
+		meshNamer := MeshNamer{
+			clusterName: in.gkeClusterName,
+			location:    in.zone,
+		}
+		networkIdentifier = fmt.Sprintf("mesh:%s", meshNamer.generateMeshId())
+	}
+	// Override networkIdentifier if in.configMesh is set. This overrides every
+	// other assignment made to networkIdentifier.
 	if in.configMesh != "" {
 		networkIdentifier = fmt.Sprintf("mesh:%s", in.configMesh)
 	}
@@ -245,6 +265,7 @@ func generate(in configInput) ([]byte, error) {
 		// xDS v2 implementation in TD expects the projectNumber and networkName in
 		// the metadata field while the v3 implementation expects these in the id
 		// field.
+
 		c.Node.Id = fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, networkIdentifier, uuid.New().String())
 		// xDS v2 implementation in TD expects the IP address to be encoded in the
 		// id field while the v3 implementation expects this in the metadata.

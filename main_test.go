@@ -574,6 +574,141 @@ func TestGenerate(t *testing.T) {
   }
 }`,
 		},
+		{
+			desc: "case to generate mesh name",
+			input: configInput{
+				xdsServerUri:               "trafficdirector.googleapis.com:443",
+				gcpProjectNumber:           123456789012345,
+				vpcNetworkName:             "thedefault",
+				ip:                         "10.9.8.7",
+				zone:                       "uscentral-5",
+				includeV3Features:          true,
+				includeFederationSupport:   true,
+				includeDirectPathAuthority: true,
+				ipv6Capable:                true,
+				includeXDSTPNameInLDS:      true,
+				generateMeshId:             true,
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "trafficdirector.googleapis.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "authorities": {
+    "": {},
+    "traffic-director-c2p.xds.googleapis.com": {
+      "xds_servers": [
+        {
+          "server_uri": "dns:///directpath-pa.googleapis.com",
+          "channel_creds": [
+            {
+              "type": "google_default"
+            }
+          ],
+          "server_features": [
+            "xds_v3",
+            "ignore_resource_deletion"
+          ]
+        }
+      ],
+      "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+    },
+    "traffic-director-global.xds.googleapis.com": {
+      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+    }
+  },
+  "node": {
+    "id": "projects/123456789012345/networks/mesh:csmmesh-88c8-uscentral-5-88c8is3pu3d7/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true,
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
+		{
+			desc: "case to ignore generateMeshId flag if config mesh name is given",
+			input: configInput{
+				xdsServerUri:               "trafficdirector.googleapis.com:443",
+				gcpProjectNumber:           123456789012345,
+				vpcNetworkName:             "thedefault",
+				ip:                         "10.9.8.7",
+				zone:                       "uscentral-5",
+				includeV3Features:          true,
+				includeFederationSupport:   true,
+				includeDirectPathAuthority: true,
+				ipv6Capable:                true,
+				includeXDSTPNameInLDS:      true,
+				generateMeshId:             true,
+				configMesh:                 "anicemeshname",
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "trafficdirector.googleapis.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "authorities": {
+    "": {},
+    "traffic-director-c2p.xds.googleapis.com": {
+      "xds_servers": [
+        {
+          "server_uri": "dns:///directpath-pa.googleapis.com",
+          "channel_creds": [
+            {
+              "type": "google_default"
+            }
+          ],
+          "server_features": [
+            "xds_v3",
+            "ignore_resource_deletion"
+          ]
+        }
+      ],
+      "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+    },
+    "traffic-director-global.xds.googleapis.com": {
+      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+    }
+  },
+  "node": {
+    "id": "projects/123456789012345/networks/mesh:anicemeshname/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true,
+      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
+      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  }
+}`,
+		},
 	}
 
 	for _, test := range tests {
