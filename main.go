@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"td-grpc-bootstrap/csm_namer"
 )
 
 var (
@@ -247,14 +248,16 @@ func generate(in configInput) ([]byte, error) {
 	for k, v := range in.metadataLabels {
 		c.Node.Metadata[k] = v
 	}
+
+	// Setting networkIdentifier based on flags.
 	networkIdentifier := in.vpcNetworkName
 	// Override networkIdentifier if in.generateMeshId is set.
 	if in.generateMeshId {
-		meshNamer := MeshNamer{
-			clusterName: in.gkeClusterName,
-			location:    in.zone,
+		meshNamer := csm_namer.MeshNamer{
+			ClusterName: in.gkeClusterName,
+			Location:    in.zone,
 		}
-		networkIdentifier = fmt.Sprintf("mesh:%s", meshNamer.generateMeshId())
+		networkIdentifier = fmt.Sprintf("mesh:%s", meshNamer.GenerateMeshId())
 	}
 	// Override networkIdentifier if in.configMesh is set. This overrides every
 	// other assignment made to networkIdentifier.
@@ -265,7 +268,6 @@ func generate(in configInput) ([]byte, error) {
 		// xDS v2 implementation in TD expects the projectNumber and networkName in
 		// the metadata field while the v3 implementation expects these in the id
 		// field.
-
 		c.Node.Id = fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, networkIdentifier, uuid.New().String())
 		// xDS v2 implementation in TD expects the IP address to be encoded in the
 		// id field while the v3 implementation expects this in the metadata.

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package csm_namer
 
 import (
 	"fmt"
@@ -34,12 +34,12 @@ const (
 )
 
 type MeshNamer struct {
-	clusterName string
-	location    string
+	ClusterName string
+	Location    string
 }
 
-func (m *MeshNamer) generateMeshId() string {
-	return readableResourceName(m.clusterName, m.location)
+func (m *MeshNamer) GenerateMeshId() string {
+	return readableResourceName(m.ClusterName, m.Location)
 }
 
 // Returns a readable resource name in the following format
