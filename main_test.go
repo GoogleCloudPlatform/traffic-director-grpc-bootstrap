@@ -691,7 +691,7 @@ func TestGenerate(t *testing.T) {
       "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     },
     "traffic-director-global.xds.googleapis.com": {
-      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/mesh:gsmmesh-88c8-uscentral-5-88c8is3pu3d7/%s"
+      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/mesh:anicemeshname/%s"
     }
   },
   "node": {
