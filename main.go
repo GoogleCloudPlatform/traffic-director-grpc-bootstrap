@@ -236,15 +236,15 @@ func generate(in configInput) ([]byte, error) {
 	for k, v := range in.metadataLabels {
 		c.Node.Metadata[k] = v
 	}
+
+	networkIdentifier := in.vpcNetworkName
+	if in.configMesh != "" {
+		networkIdentifier = fmt.Sprintf("mesh:%s", in.configMesh)
+	}
 	if in.includeV3Features {
 		// xDS v2 implementation in TD expects the projectNumber and networkName in
 		// the metadata field while the v3 implementation expects these in the id
 		// field.
-		networkIdentifier := in.vpcNetworkName
-		if in.configMesh != "" {
-			networkIdentifier = fmt.Sprintf("mesh:%s", in.configMesh)
-		}
-
 		c.Node.Id = fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, networkIdentifier, uuid.New().String())
 		// xDS v2 implementation in TD expects the IP address to be encoded in the
 		// id field while the v3 implementation expects this in the metadata.
@@ -280,7 +280,9 @@ func generate(in configInput) ([]byte, error) {
 		if in.includeXDSTPNameInLDS {
 			tdAuthority := "traffic-director-global.xds.googleapis.com"
 			c.Authorities[tdAuthority] = Authority{
-				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", tdAuthority),
+				// Listener Resource Name format for normal TD usecases looks like:
+				// xdstp://<authority>/envoy.config.listener.v3.Listener/<project_number>/<(network)|(mesh:mesh_name)>/id
+				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%d/%s/%%s", tdAuthority, in.gcpProjectNumber, networkIdentifier),
 			}
 		}
 
