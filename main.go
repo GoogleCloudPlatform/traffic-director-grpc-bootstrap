@@ -280,7 +280,7 @@ func generate(in configInput) ([]byte, error) {
 		if in.includeXDSTPNameInLDS {
 			tdAuthority := "traffic-director-global.xds.googleapis.com"
 			c.Authorities[tdAuthority] = Authority{
-				// Listener Resource Name format for p2c config looks like:
+				// Listener Resource Name format for normal TD usecases looks like:
 				// xdstp://<authority>/envoy.config.listener.v3.Listener/<project_number>/<(network)|(mesh:mesh_name)>/id
 				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%d/%s/%%s", tdAuthority, in.gcpProjectNumber, networkIdentifier),
 			}
