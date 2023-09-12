@@ -623,11 +623,11 @@ func TestGenerate(t *testing.T) {
       "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     },
     "traffic-director-global.xds.googleapis.com": {
-      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/mesh:gsmmesh-88c8-uscentral-5-88c8is3pu3d7/%s"
     }
   },
   "node": {
-    "id": "projects/123456789012345/networks/mesh:csmmesh-88c8-uscentral-5-88c8is3pu3d7/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "id": "projects/123456789012345/networks/mesh:gsmmesh-88c8-uscentral-5-88c8is3pu3d7/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
@@ -691,7 +691,7 @@ func TestGenerate(t *testing.T) {
       "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
     },
     "traffic-director-global.xds.googleapis.com": {
-      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/mesh:gsmmesh-88c8-uscentral-5-88c8is3pu3d7/%s"
     }
   },
   "node": {

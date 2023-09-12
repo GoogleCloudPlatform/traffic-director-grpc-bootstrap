@@ -30,7 +30,7 @@ const (
 	// prefix used for GCE resource names created by GAMMA mesh.
 	clusterUIDLen = 4
 	// csmMeshPrefix is the prefix override used in the CSMMesh use cases.
-	csmMeshPrefix = "csmmesh"
+	csmMeshPrefix = "gsmmesh"
 )
 
 type MeshNamer struct {
