@@ -148,7 +148,6 @@ func TestDefault(t *testing.T) {
 		configMesh:                 *configMesh,
 		includeFederationSupport:   *includeFederationSupport,
 		includeDirectPathAuthority: *includeDirectPathAuthority,
-		ipv6Capable:                isIPv6Capable(),
 		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
 	}
 	// Make UUID.New().String() deterministic.
