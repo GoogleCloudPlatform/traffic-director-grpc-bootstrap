@@ -48,7 +48,6 @@ var (
 	gkeNamespace               = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includeFederationSupport   = flag.Bool("include-federation-support-experimental", true, "whether or not to generate configs required for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", true, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeXDSTPNameInLDS      = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use xdstp style name for listener resource name template. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
@@ -135,7 +134,6 @@ func main() {
 		metadataLabels:             nodeMetadata,
 		deploymentInfo:             deploymentInfo,
 		configMesh:                 *configMesh,
-		includeFederationSupport:   *includeFederationSupport,
 		includeDirectPathAuthority: *includeDirectPathAuthority,
 		ipv6Capable:                isIPv6Capable(),
 		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
@@ -191,7 +189,6 @@ type configInput struct {
 	metadataLabels             map[string]string
 	deploymentInfo             map[string]string
 	configMesh                 string
-	includeFederationSupport   bool
 	includeDirectPathAuthority bool
 	ipv6Capable                bool
 	includeXDSTPNameInLDS      bool
@@ -268,38 +265,36 @@ func generate(in configInput) ([]byte, error) {
 	if in.deploymentInfo != nil {
 		c.Node.Metadata["TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT"] = in.deploymentInfo
 	}
-	if in.includeFederationSupport {
-		// Authorities with an empty server config will end up using
-		// the top-level server config. For more details, see:
-		// https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes.
-		c.Authorities = map[string]Authority{
-			"": {},
-		}
 
-		if in.includeXDSTPNameInLDS {
-			tdAuthority := "traffic-director-global.xds.googleapis.com"
-			c.Authorities[tdAuthority] = Authority{
-				// Listener Resource Name format for normal TD usecases looks like:
-				// xdstp://<authority>/envoy.config.listener.v3.Listener/<project_number>/<(network)|(mesh:mesh_name)>/id
-				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%d/%s/%%s", tdAuthority, in.gcpProjectNumber, networkIdentifier),
-			}
+	if in.includeXDSTPNameInLDS {
+		if c.Authorities == nil {
+			c.Authorities = make(map[string]Authority)
 		}
+		tdAuthority := "traffic-director-global.xds.googleapis.com"
+		c.Authorities[tdAuthority] = Authority{
+			// Listener Resource Name format for normal TD usecases looks like:
+			// xdstp://<authority>/envoy.config.listener.v3.Listener/<project_number>/<(network)|(mesh:mesh_name)>/id
+			ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%d/%s/%%s", tdAuthority, in.gcpProjectNumber, networkIdentifier),
+		}
+	}
 
-		if in.includeDirectPathAuthority {
-			c2pAuthority := "traffic-director-c2p.xds.googleapis.com"
-			c.Authorities[c2pAuthority] = Authority{
-				// In the case of DirectPath, it is safe to assume that the operator is notified of missing resources.
-				// In other words, "ignore_resource_deletion" server_features is always set.
-				XdsServers: []server{{
-					ServerUri:      "dns:///directpath-pa.googleapis.com",
-					ChannelCreds:   []creds{{Type: "google_default"}},
-					ServerFeatures: []string{"xds_v3", "ignore_resource_deletion"},
-				}},
-				ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority),
-			}
-			if in.ipv6Capable {
-				c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
-			}
+	if in.includeDirectPathAuthority {
+		if c.Authorities == nil {
+			c.Authorities = make(map[string]Authority)
+		}
+		c2pAuthority := "traffic-director-c2p.xds.googleapis.com"
+		c.Authorities[c2pAuthority] = Authority{
+			// In the case of DirectPath, it is safe to assume that the operator is notified of missing resources.
+			// In other words, "ignore_resource_deletion" server_features is always set.
+			XdsServers: []server{{
+				ServerUri:      "dns:///directpath-pa.googleapis.com",
+				ChannelCreds:   []creds{{Type: "google_default"}},
+				ServerFeatures: []string{"xds_v3", "ignore_resource_deletion"},
+			}},
+			ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority),
+		}
+		if in.ipv6Capable {
+			c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
 		}
 	}
 
