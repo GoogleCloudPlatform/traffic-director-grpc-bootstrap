@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"td-grpc-bootstrap/csm_namer"
+	"td-grpc-bootstrap/csmnamer"
 )
 
 var (
@@ -87,6 +87,10 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to determine zone: %s\n", err)
 			zone = ""
+			if *generateMeshId {
+				// Zone is required while using with generateMeshID.
+				os.Exit(1)
+			}
 		}
 	}
 
@@ -94,7 +98,14 @@ func main() {
 	// arguments, with the latter taking preference.
 	cluster := *gkeClusterName
 	if cluster == "" {
-		cluster = getClusterName()
+		cluster, err = getClusterName()
+		if err != nil && *generateMeshId {
+			// The metadata server would return an error when run on GCE VMs.
+			// gkeClusterName should be passed in when using generateMeshID in GCE VM
+			// cases.
+			fmt.Fprintf(os.Stderr, "could not discover GKE cluster name: %v", err)
+			os.Exit(1)
+		}
 	}
 	// Generate deployment info from metadata server or from command-line
 	// arguments, with the latter taking preference.
@@ -127,6 +138,19 @@ func main() {
 		}
 	}
 
+	var meshId string
+	if *generateMeshId {
+		meshNamer := csmnamer.MeshNamer{
+			ClusterName: cluster,
+			Location:    zone,
+		}
+		meshId = fmt.Sprintf("mesh:%s", meshNamer.GenerateMeshId())
+	}
+	// Override meshId if configMesh is set.
+	if *configMesh != "" {
+		meshId = *configMesh
+	}
+
 	input := configInput{
 		xdsServerUri:               *xdsServerUri,
 		gcpProjectNumber:           *gcpProjectNumber,
@@ -139,9 +163,7 @@ func main() {
 		secretsDir:                 *secretsDir,
 		metadataLabels:             nodeMetadata,
 		deploymentInfo:             deploymentInfo,
-		configMesh:                 *configMesh,
-		generateMeshId:             *generateMeshId,
-		gkeClusterName:             cluster,
+		configMesh:                 meshId,
 		includeFederationSupport:   *includeFederationSupport,
 		includeDirectPathAuthority: *includeDirectPathAuthority,
 		ipv6Capable:                isIPv6Capable(),
@@ -198,8 +220,6 @@ type configInput struct {
 	metadataLabels             map[string]string
 	deploymentInfo             map[string]string
 	configMesh                 string
-	generateMeshId             bool
-	gkeClusterName             string
 	includeFederationSupport   bool
 	includeDirectPathAuthority bool
 	ipv6Capable                bool
@@ -210,14 +230,6 @@ func validate(in configInput) error {
 	re := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-]{0,63}$`)
 	if in.configMesh != "" && !re.MatchString(in.configMesh) {
 		return fmt.Errorf("config-mesh may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length")
-	}
-
-	// If in.configMesh != "", then do not validate for generateMeshId constraints,
-	// since the value configMesh would be used as MeshID in generate().
-	if in.configMesh == "" && in.generateMeshId {
-		if in.gkeClusterName == "" {
-			return fmt.Errorf("GKE cluster name cannot be empty while generate-mesh-id flag is enabled")
-		}
 	}
 
 	return nil
@@ -255,16 +267,6 @@ func generate(in configInput) ([]byte, error) {
 
 	// Setting networkIdentifier based on flags.
 	networkIdentifier := in.vpcNetworkName
-	// Override networkIdentifier if in.generateMeshId is set.
-	if in.generateMeshId {
-		meshNamer := csm_namer.MeshNamer{
-			ClusterName: in.gkeClusterName,
-			Location:    in.zone,
-		}
-		networkIdentifier = fmt.Sprintf("mesh:%s", meshNamer.GenerateMeshId())
-	}
-	// Override networkIdentifier if in.configMesh is set. This overrides every
-	// other assignment made to networkIdentifier.
 	if in.configMesh != "" {
 		networkIdentifier = fmt.Sprintf("mesh:%s", in.configMesh)
 	}
@@ -373,13 +375,12 @@ func getProjectId() (int64, error) {
 	return projectId, nil
 }
 
-func getClusterName() string {
+func getClusterName() (string, error) {
 	cluster, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-name")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not discover GKE cluster name: %v", err)
-		return ""
+		return "", err
 	}
-	return string(cluster)
+	return string(cluster), nil
 }
 
 // For overriding in unit tests.

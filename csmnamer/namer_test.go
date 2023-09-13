@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package csm_namer
+// DO NOT EDIT: This code is a subset of services_platform/thetis/gateway/core/v1alpha2/common/appnettranslator/gsm/namer_test.go
+// and should not be modified to maintain functional consistency.
+
+package csmnamer
 
 import (
 	"strconv"

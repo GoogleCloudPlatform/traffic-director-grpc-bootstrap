@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package csm_namer
+// DO NOT EDIT: This is a sync of services_platform/thetis/common/gke_net/naming.go
+// and should not be modified to maintain functional consistency.
+
+package csmnamer
 
 import (
 	"crypto/sha256"
