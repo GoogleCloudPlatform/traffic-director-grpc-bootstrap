@@ -90,6 +90,12 @@ func main() {
 		}
 	}
 
+	// Generate clusterName from metadata server or from command-line
+	// arguments, with the latter taking preference.
+	cluster := *gkeClusterName
+	if cluster == "" {
+		cluster = getClusterName()
+	}
 	// Generate deployment info from metadata server or from command-line
 	// arguments, with the latter taking preference.
 	var deploymentInfo map[string]string
@@ -97,10 +103,6 @@ func main() {
 		dType := getDeploymentType()
 		switch dType {
 		case deploymentTypeGKE:
-			cluster := *gkeClusterName
-			if cluster == "" {
-				cluster = getClusterName()
-			}
 			pod := *gkePodName
 			if pod == "" {
 				pod = getPodName()
@@ -138,6 +140,8 @@ func main() {
 		metadataLabels:             nodeMetadata,
 		deploymentInfo:             deploymentInfo,
 		configMesh:                 *configMesh,
+		generateMeshId:             *generateMeshId,
+		gkeClusterName:             cluster,
 		includeFederationSupport:   *includeFederationSupport,
 		includeDirectPathAuthority: *includeDirectPathAuthority,
 		ipv6Capable:                isIPv6Capable(),
@@ -209,10 +213,10 @@ func validate(in configInput) error {
 	}
 
 	// If in.configMesh != "", then do not validate for generateMeshId constraints,
-	// since the value configMesh would be used as MeshID in generate()
+	// since the value configMesh would be used as MeshID in generate().
 	if in.configMesh == "" && in.generateMeshId {
 		if in.gkeClusterName == "" {
-			return fmt.Errorf("gke-cluster-name-experimental has to be set while using generate-mesh-id")
+			return fmt.Errorf("GKE cluster name cannot be empty while generate-mesh-id flag is enabled")
 		}
 	}
 
