@@ -50,7 +50,7 @@ var (
 	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeFederationSupport   = flag.Bool("include-federation-support-experimental", true, "whether or not to generate configs required for xDS Federation. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", true, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includeXDSTPNameInLDS      = flag.Bool("include-xdstp-name-in-lds-experimental", true, "whether or not to use xDSTP style name for listener resource name template. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeXDSTPNameInLDS      = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use xdstp style name for listener resource name template. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
