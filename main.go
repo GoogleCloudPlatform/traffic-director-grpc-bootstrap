@@ -85,26 +85,32 @@ func main() {
 	if zone == "" {
 		zone, err = getZone()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to determine zone: %s\n", err)
+			err = fmt.Errorf("failed to determine zone: %s\n", err)
 			zone = ""
 			if *generateMeshId {
 				// Zone is required while using with generateMeshID.
+				fmt.Fprintf(os.Stderr, "Error: failed to determine zone: %s\n", err)
 				os.Exit(1)
 			}
+			fmt.Fprintf(os.Stderr, "Warning: failed to determine zone: %s\n", err)
 		}
 	}
 
 	// Generate clusterName from metadata server or from command-line
 	// arguments, with the latter taking preference.
 	cluster := *gkeClusterName
+	var clusterErr error
 	if cluster == "" {
-		cluster, err = getClusterName()
-		if err != nil && *generateMeshId {
-			// The metadata server would return an error when run on GCE VMs.
-			// gkeClusterName should be passed in when using generateMeshID in GCE VM
-			// cases.
-			fmt.Fprintf(os.Stderr, "could not discover GKE cluster name: %v", err)
-			os.Exit(1)
+		cluster, clusterErr = getClusterName()
+		if err != nil {
+			if *generateMeshId {
+				// The metadata server would return an error when running on GCE VMs.
+				// gkeClusterName should be passed in when using generateMeshID in GCE
+				// VM cases.
+				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+				os.Exit(1)
+			}
+			clusterErr = fmt.Errorf("Warning: failed to determine GKE cluster name: %s\n", err)
 		}
 	}
 	// Generate deployment info from metadata server or from command-line
@@ -114,6 +120,9 @@ func main() {
 		dType := getDeploymentType()
 		switch dType {
 		case deploymentTypeGKE:
+			if clusterErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
+			}
 			pod := *gkePodName
 			if pod == "" {
 				pod = getPodName()
@@ -144,7 +153,7 @@ func main() {
 			ClusterName: cluster,
 			Location:    zone,
 		}
-		meshId = fmt.Sprintf("mesh:%s", meshNamer.GenerateMeshId())
+		meshId = meshNamer.GenerateMeshId()
 	}
 	// Override meshId if configMesh is set.
 	if *configMesh != "" {
@@ -378,7 +387,7 @@ func getProjectId() (int64, error) {
 func getClusterName() (string, error) {
 	cluster, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-name")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to determine GKE cluster name: %s\n", err)
 	}
 	return string(cluster), nil
 }
