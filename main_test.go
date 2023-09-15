@@ -405,49 +405,7 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "happy case with v3 defaults and federation support enabled",
-			input: configInput{
-				xdsServerUri:             "example.com:443",
-				gcpProjectNumber:         123456789012345,
-				vpcNetworkName:           "thedefault",
-				ip:                       "10.9.8.7",
-				zone:                     "uscentral-5",
-				includeV3Features:        true,
-				includeFederationSupport: true,
-			},
-			wantOutput: `{
-  "xds_servers": [
-    {
-      "server_uri": "example.com:443",
-      "channel_creds": [
-        {
-          "type": "google_default"
-        }
-      ],
-      "server_features": [
-        "xds_v3"
-      ]
-    }
-  ],
-  "authorities": {
-    "": {}
-  },
-  "node": {
-    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
-    "cluster": "cluster",
-    "metadata": {
-      "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
-    },
-    "locality": {
-      "zone": "uscentral-5"
-    }
-  }
-}`,
-		},
-		{
-			desc: "happy case with federation support enabled and c2p authority included",
+			desc: "happy case with federation support of c2p authority included",
 			input: configInput{
 				xdsServerUri:               "example.com:443",
 				gcpProjectNumber:           123456789012345,
@@ -455,7 +413,6 @@ func TestGenerate(t *testing.T) {
 				ip:                         "10.9.8.7",
 				zone:                       "uscentral-5",
 				includeV3Features:          true,
-				includeFederationSupport:   true,
 				includeDirectPathAuthority: true,
 				ipv6Capable:                true,
 			},
@@ -474,7 +431,6 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "authorities": {
-    "": {},
     "traffic-director-c2p.xds.googleapis.com": {
       "xds_servers": [
         {
@@ -509,7 +465,7 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "happy case with federation support in directpath with new xdstp style name",
+			desc: "happy case with federation support of c2p along with regular TD using xdstp style name",
 			input: configInput{
 				xdsServerUri:               "trafficdirector.googleapis.com:443",
 				gcpProjectNumber:           123456789012345,
@@ -517,7 +473,6 @@ func TestGenerate(t *testing.T) {
 				ip:                         "10.9.8.7",
 				zone:                       "uscentral-5",
 				includeV3Features:          true,
-				includeFederationSupport:   true,
 				includeDirectPathAuthority: true,
 				ipv6Capable:                true,
 				includeXDSTPNameInLDS:      true,
@@ -537,7 +492,6 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "authorities": {
-    "": {},
     "traffic-director-c2p.xds.googleapis.com": {
       "xds_servers": [
         {
