@@ -100,12 +100,12 @@ func main() {
 	var clusterErr error
 	if cluster == "" {
 		cluster, clusterErr = getClusterName()
-		if err != nil {
+		if clusterErr != nil {
 			if *generateMeshId {
 				// The metadata server would return an error when running on GCE VMs.
 				// gkeClusterName should be passed in when using generateMeshID in GCE
 				// VM cases.
-				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+				fmt.Fprintf(os.Stderr, "Error: generate-mesh-id-experimental flag was supplied, but was unable to determine the current cluster from the metadata server with error: %s\n", err)
 				os.Exit(1)
 			}
 			clusterErr = fmt.Errorf("Warning: failed to determine GKE cluster name: %s\n", err)
