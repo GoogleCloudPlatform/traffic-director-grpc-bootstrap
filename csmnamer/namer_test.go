@@ -92,3 +92,37 @@ func TestReadableResourceName(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateMeshId(t *testing.T) {
+	cases := []struct {
+		desc        string
+		clusterName string
+		location    string
+		want        string
+	}{
+		{
+			desc:        "no-error",
+			location:    "us-central1-a",
+			clusterName: "test-cluster",
+			want:        "gsmmesh-4g63-test-cluster-us-central1-a-4g63fl4kjz0z",
+		},
+		{
+			desc:        "longest-everything-and-still-no-error",
+			location:    "us-northeast1-a",
+			clusterName: "test-cluster-test-cluster-test-clusterss",
+			want:        "gsmmesh-l5lo-test-cluster-test-cluster-t-us-northe-l5loax1rjdik",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			namer := MeshNamer{
+				ClusterName: tc.clusterName,
+				Location:    tc.location,
+			}
+			if got := namer.GenerateMeshId(); got != tc.want {
+				t.Fatalf("Got name %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
