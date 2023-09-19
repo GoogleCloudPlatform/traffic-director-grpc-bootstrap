@@ -83,14 +83,13 @@ func main() {
 	if zone == "" {
 		zone, err = getZone()
 		if err != nil {
-			err = fmt.Errorf("failed to determine zone: %s\n", err)
 			zone = ""
 			if *generateMeshId {
 				// Zone is required while using with generateMeshID.
-				fmt.Fprintf(os.Stderr, "Error: failed to determine zone: %s\n", err)
+				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 				os.Exit(1)
 			}
-			fmt.Fprintf(os.Stderr, "Warning: failed to determine zone: %s\n", err)
+			fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
 		}
 	}
 
@@ -108,7 +107,7 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Error: generate-mesh-id-experimental flag was supplied, but was unable to determine the current cluster from the metadata server with error: %s\n", err)
 				os.Exit(1)
 			}
-			clusterErr = fmt.Errorf("Warning: failed to determine GKE cluster name: %s\n", err)
+			clusterErr = fmt.Errorf("Warning: %s\n", err)
 		}
 	}
 	// Generate deployment info from metadata server or from command-line
@@ -357,11 +356,11 @@ func getHostIp() (string, error) {
 func getZone() (string, error) {
 	qualifiedZone, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/zone")
 	if err != nil {
-		return "", fmt.Errorf("could not discover instance zone: %w", err)
+		return "", fmt.Errorf("failed to determine zone: could not discover instance zone: %w", err)
 	}
 	i := bytes.LastIndexByte(qualifiedZone, '/')
 	if i == -1 {
-		return "", fmt.Errorf("could not parse zone from metadata server: %s", qualifiedZone)
+		return "", fmt.Errorf("failed to determine zone: could not parse zone from metadata server: %s", qualifiedZone)
 	}
 	return string(qualifiedZone[i+1:]), nil
 }
