@@ -602,7 +602,7 @@ func TestGetClusterName(t *testing.T) {
 			}
 			w.Write([]byte("test-cluster"))
 		})
-	if got := getClusterName(); got != want {
+	if got, _ := getClusterName(); got != want {
 		t.Fatalf("getClusterName() = %s, want: %s", got, want)
 	}
 }

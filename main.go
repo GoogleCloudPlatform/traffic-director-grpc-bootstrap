@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"td-grpc-bootstrap/csmnamer"
 )
 
 var (
@@ -48,6 +49,7 @@ var (
 	gkeNamespace               = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	generateMeshId             = flag.Bool("generate-mesh-id-experimental", false, "When enabled, the CSM MeshID is generated. If config-mesh-experimental flag is specified, this flag would be ignored. Zone and cluster name would be retrieved from the metadata server unless specified via locality-zone and gke-cluster-name-experimental flags respectively. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", true, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeXDSTPNameInLDS      = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use xdstp style name for listener resource name template. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
@@ -81,11 +83,33 @@ func main() {
 	if zone == "" {
 		zone, err = getZone()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to determine zone: %s\n", err)
 			zone = ""
+			if *generateMeshId {
+				// Zone is required while using with generateMeshID.
+				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+				os.Exit(1)
+			}
+			fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
 		}
 	}
 
+	// Generate clusterName from metadata server or from command-line
+	// arguments, with the latter taking preference.
+	cluster := *gkeClusterName
+	var clusterErr error
+	if cluster == "" {
+		cluster, clusterErr = getClusterName()
+		if clusterErr != nil {
+			if *generateMeshId {
+				// The metadata server would return an error when running on GCE VMs.
+				// gkeClusterName should be passed in when using generateMeshID in GCE
+				// VM cases.
+				fmt.Fprintf(os.Stderr, "Error: generate-mesh-id-experimental flag was supplied, but was unable to determine the current cluster from the metadata server with error: %s\n", err)
+				os.Exit(1)
+			}
+			clusterErr = fmt.Errorf("Warning: %s\n", err)
+		}
+	}
 	// Generate deployment info from metadata server or from command-line
 	// arguments, with the latter taking preference.
 	var deploymentInfo map[string]string
@@ -93,9 +117,8 @@ func main() {
 		dType := getDeploymentType()
 		switch dType {
 		case deploymentTypeGKE:
-			cluster := *gkeClusterName
-			if cluster == "" {
-				cluster = getClusterName()
+			if clusterErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
 			}
 			pod := *gkePodName
 			if pod == "" {
@@ -121,6 +144,19 @@ func main() {
 		}
 	}
 
+	var meshId string
+	if *generateMeshId {
+		meshNamer := csmnamer.MeshNamer{
+			ClusterName: cluster,
+			Location:    zone,
+		}
+		meshId = meshNamer.GenerateMeshId()
+	}
+	// Override meshId if configMesh is set.
+	if *configMesh != "" {
+		meshId = *configMesh
+	}
+
 	input := configInput{
 		xdsServerUri:               *xdsServerUri,
 		gcpProjectNumber:           *gcpProjectNumber,
@@ -133,7 +169,7 @@ func main() {
 		secretsDir:                 *secretsDir,
 		metadataLabels:             nodeMetadata,
 		deploymentInfo:             deploymentInfo,
-		configMesh:                 *configMesh,
+		configMesh:                 meshId,
 		includeDirectPathAuthority: *includeDirectPathAuthority,
 		ipv6Capable:                isIPv6Capable(),
 		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
@@ -233,6 +269,7 @@ func generate(in configInput) ([]byte, error) {
 		c.Node.Metadata[k] = v
 	}
 
+	// Setting networkIdentifier based on flags.
 	networkIdentifier := in.vpcNetworkName
 	if in.configMesh != "" {
 		networkIdentifier = fmt.Sprintf("mesh:%s", in.configMesh)
@@ -319,11 +356,11 @@ func getHostIp() (string, error) {
 func getZone() (string, error) {
 	qualifiedZone, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/zone")
 	if err != nil {
-		return "", fmt.Errorf("could not discover instance zone: %w", err)
+		return "", fmt.Errorf("failed to determine zone: could not discover instance zone: %w", err)
 	}
 	i := bytes.LastIndexByte(qualifiedZone, '/')
 	if i == -1 {
-		return "", fmt.Errorf("could not parse zone from metadata server: %s", qualifiedZone)
+		return "", fmt.Errorf("failed to determine zone: could not parse zone from metadata server: %s", qualifiedZone)
 	}
 	return string(qualifiedZone[i+1:]), nil
 }
@@ -340,13 +377,12 @@ func getProjectId() (int64, error) {
 	return projectId, nil
 }
 
-func getClusterName() string {
+func getClusterName() (string, error) {
 	cluster, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-name")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not discover GKE cluster name: %v", err)
-		return ""
+		return "", fmt.Errorf("failed to determine GKE cluster name: %s\n", err)
 	}
-	return string(cluster)
+	return string(cluster), nil
 }
 
 // For overriding in unit tests.
