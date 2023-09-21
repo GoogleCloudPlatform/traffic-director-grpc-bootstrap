@@ -14,7 +14,7 @@
 
 steps:
 - name: golang:1.18
-  args: ['go', 'build', './...']
+  args: ['go', 'build', '.']
 - name: golang:1.18
   args: ['go', 'test', './...']
 - name: alpine
