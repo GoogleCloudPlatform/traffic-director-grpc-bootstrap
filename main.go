@@ -29,8 +29,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"td-grpc-bootstrap/csmnamer"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -40,8 +41,6 @@ var (
 	vpcNetworkName             = flag.String("vpc-network-name", "default", "VPC network name")
 	localityZone               = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
 	ignoreResourceDeletion     = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includeV3Features          = flag.Bool("include-v3-features-experimental", true, "whether or not to generate configs which works with the xDS v3 implementation in TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includePSMSecurity         = flag.Bool("include-psm-security-experimental", true, "whether or not to generate config required for PSM security. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	secretsDir                 = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
 	includeDeploymentInfo      = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeClusterName             = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
@@ -164,8 +163,6 @@ func main() {
 		ip:                         ip,
 		zone:                       zone,
 		ignoreResourceDeletion:     *ignoreResourceDeletion,
-		includeV3Features:          *includeV3Features,
-		includePSMSecurity:         *includePSMSecurity,
 		secretsDir:                 *secretsDir,
 		metadataLabels:             nodeMetadata,
 		deploymentInfo:             deploymentInfo,
@@ -219,8 +216,6 @@ type configInput struct {
 	ip                         string
 	zone                       string
 	ignoreResourceDeletion     bool
-	includeV3Features          bool
-	includePSMSecurity         bool
 	secretsDir                 string
 	metadataLabels             map[string]string
 	deploymentInfo             map[string]string
@@ -244,23 +239,30 @@ func generate(in configInput) ([]byte, error) {
 		ServerUri:    in.xdsServerUri,
 		ChannelCreds: []creds{{Type: "google_default"}},
 	}
-	if in.includeV3Features {
-		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3")
-	}
+
+	// Set xds_v3 Server Features.
+	xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3")
+
 	if in.ignoreResourceDeletion {
 		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "ignore_resource_deletion")
 	}
+
+	// Setting networkIdentifier based on flags.
+	networkIdentifier := in.vpcNetworkName
+	if in.configMesh != "" {
+		networkIdentifier = fmt.Sprintf("mesh:%s", in.configMesh)
+	}
+
 	c := &config{
 		XdsServers: []server{xdsServer},
 		Node: &node{
-			Id:      uuid.New().String() + "~" + in.ip,
+			Id:      fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, networkIdentifier, uuid.New().String()),
 			Cluster: "cluster", // unused by TD
 			Locality: &locality{
 				Zone: in.zone,
 			},
 			Metadata: map[string]interface{}{
-				"TRAFFICDIRECTOR_NETWORK_NAME":       in.vpcNetworkName,
-				"TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": strconv.FormatInt(in.gcpProjectNumber, 10),
+				"INSTANCE_IP": in.ip,
 			},
 		},
 	}
@@ -269,36 +271,22 @@ func generate(in configInput) ([]byte, error) {
 		c.Node.Metadata[k] = v
 	}
 
-	// Setting networkIdentifier based on flags.
-	networkIdentifier := in.vpcNetworkName
-	if in.configMesh != "" {
-		networkIdentifier = fmt.Sprintf("mesh:%s", in.configMesh)
-	}
-	if in.includeV3Features {
-		// xDS v2 implementation in TD expects the projectNumber and networkName in
-		// the metadata field while the v3 implementation expects these in the id
-		// field.
-		c.Node.Id = fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, networkIdentifier, uuid.New().String())
-		// xDS v2 implementation in TD expects the IP address to be encoded in the
-		// id field while the v3 implementation expects this in the metadata.
-		c.Node.Metadata["INSTANCE_IP"] = in.ip
-	}
-	if in.includePSMSecurity {
-		c.CertificateProviders = map[string]certificateProviderConfig{
-			"google_cloud_private_spiffe": {
-				PluginName: "file_watcher",
-				Config: privateSPIFFEConfig{
-					CertificateFile:   path.Join(in.secretsDir, "certificates.pem"),
-					PrivateKeyFile:    path.Join(in.secretsDir, "private_key.pem"),
-					CACertificateFile: path.Join(in.secretsDir, "ca_certificates.pem"),
-					// The file_watcher plugin will parse this a Duration proto, but it is totally
-					// fine to just emit a string here.
-					RefreshInterval: "600s",
-				},
+	// For PSM Security.
+	c.CertificateProviders = map[string]certificateProviderConfig{
+		"google_cloud_private_spiffe": {
+			PluginName: "file_watcher",
+			Config: privateSPIFFEConfig{
+				CertificateFile:   path.Join(in.secretsDir, "certificates.pem"),
+				PrivateKeyFile:    path.Join(in.secretsDir, "private_key.pem"),
+				CACertificateFile: path.Join(in.secretsDir, "ca_certificates.pem"),
+				// The file_watcher plugin will parse this a Duration proto, but it is totally
+				// fine to just emit a string here.
+				RefreshInterval: "600s",
 			},
-		}
-		c.ServerListenerResourceNameTemplate = "grpc/server?xds.resource.listening_address=%s"
+		},
 	}
+
+	c.ServerListenerResourceNameTemplate = "grpc/server?xds.resource.listening_address=%s"
 	if in.deploymentInfo != nil {
 		c.Node.Metadata["TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT"] = in.deploymentInfo
 	}

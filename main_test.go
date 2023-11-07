@@ -36,42 +36,39 @@ func TestValidate(t *testing.T) {
 		{
 			desc: "fails when config-mesh has too many characters",
 			input: configInput{
-				xdsServerUri:      "example.com:443",
-				gcpProjectNumber:  123456789012345,
-				vpcNetworkName:    "thedefault",
-				ip:                "10.9.8.7",
-				zone:              "uscentral-5",
-				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
-				includeV3Features: true,
-				configMesh:        strings.Repeat("a", 65),
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
+				metadataLabels:   map[string]string{"k1": "v1", "k2": "v2"},
+				configMesh:       strings.Repeat("a", 65),
 			},
 			wantError: "config-mesh may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
 		},
 		{
 			desc: "fails when config-mesh does not start with an alphabetic letter",
 			input: configInput{
-				xdsServerUri:      "example.com:443",
-				gcpProjectNumber:  123456789012345,
-				vpcNetworkName:    "thedefault",
-				ip:                "10.9.8.7",
-				zone:              "uscentral-5",
-				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
-				includeV3Features: true,
-				configMesh:        "4foo",
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
+				metadataLabels:   map[string]string{"k1": "v1", "k2": "v2"},
+				configMesh:       "4foo",
 			},
 			wantError: "config-mesh may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
 		},
 		{
 			desc: "fails when config-mesh contains characters besides letters, numbers, and hyphens.",
 			input: configInput{
-				xdsServerUri:      "example.com:443",
-				gcpProjectNumber:  123456789012345,
-				vpcNetworkName:    "thedefault",
-				ip:                "10.9.8.7",
-				zone:              "uscentral-5",
-				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
-				includeV3Features: true,
-				configMesh:        "h*x8",
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
+				metadataLabels:   map[string]string{"k1": "v1", "k2": "v2"},
+				configMesh:       "h*x8",
 			},
 			wantError: "config-mesh may only contain letters, numbers, and '-'. It must begin with a letter and must not exceed 64 characters in length",
 		},
@@ -96,13 +93,12 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case with v3 config by default",
 			input: configInput{
-				xdsServerUri:      "example.com:443",
-				gcpProjectNumber:  123456789012345,
-				vpcNetworkName:    "thedefault",
-				ip:                "10.9.8.7",
-				zone:              "uscentral-5",
-				metadataLabels:    map[string]string{"k1": "v1", "k2": "v2"},
-				includeV3Features: true,
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
+				metadataLabels:   map[string]string{"k1": "v1", "k2": "v2"},
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -119,66 +115,40 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "node": {
-    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
       "k1": "v1",
       "k2": "v2"
     },
     "locality": {
       "zone": "uscentral-5"
     }
-  }
-}`,
-		},
-		{
-			desc: "happy case with v2 config",
-			input: configInput{
-				xdsServerUri:      "example.com:443",
-				gcpProjectNumber:  123456789012345,
-				vpcNetworkName:    "thedefault",
-				ip:                "10.9.8.7",
-				zone:              "uscentral-5",
-				includeV3Features: false,
-			},
-			wantOutput: `{
-  "xds_servers": [
-    {
-      "server_uri": "example.com:443",
-      "channel_creds": [
-        {
-          "type": "google_default"
-        }
-      ]
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "certificates.pem",
+        "private_key_file": "private_key.pem",
+        "ca_certificate_file": "ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
     }
-  ],
-  "node": {
-    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
-    "cluster": "cluster",
-    "metadata": {
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
-    },
-    "locality": {
-      "zone": "uscentral-5"
-    }
-  }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
 }`,
 		},
 		{
 			desc: "happy case with security config",
 			input: configInput{
-				xdsServerUri:       "example.com:443",
-				gcpProjectNumber:   123456789012345,
-				vpcNetworkName:     "thedefault",
-				ip:                 "10.9.8.7",
-				zone:               "uscentral-5",
-				includeV3Features:  true,
-				includePSMSecurity: true,
-				secretsDir:         "/secrets/dir/",
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
+				secretsDir:       "/secrets/dir/",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -195,12 +165,10 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "node": {
-    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
-      "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+      "INSTANCE_IP": "10.9.8.7"
     },
     "locality": {
       "zone": "uscentral-5"
@@ -223,12 +191,11 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case with deployment info",
 			input: configInput{
-				xdsServerUri:      "example.com:443",
-				gcpProjectNumber:  123456789012345,
-				vpcNetworkName:    "thedefault",
-				ip:                "10.9.8.7",
-				zone:              "uscentral-5",
-				includeV3Features: true,
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
 				deploymentInfo: map[string]string{
 					"GCP-ZONE":      "uscentral-5",
 					"GKE-CLUSTER":   "test-gke-cluster",
@@ -253,12 +220,10 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "node": {
-    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
       "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
         "GCE-VM": "test-gce-vm",
         "GCP-ZONE": "uscentral-5",
@@ -271,18 +236,29 @@ func TestGenerate(t *testing.T) {
     "locality": {
       "zone": "uscentral-5"
     }
-  }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "certificates.pem",
+        "private_key_file": "private_key.pem",
+        "ca_certificate_file": "ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
 }`,
 		},
 		{
 			desc: "configMesh specified",
 			input: configInput{
-				xdsServerUri:      "example.com:443",
-				gcpProjectNumber:  123456789012345,
-				vpcNetworkName:    "thedefault",
-				ip:                "10.9.8.7",
-				zone:              "uscentral-5",
-				includeV3Features: true,
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
 				deploymentInfo: map[string]string{
 					"GCP-ZONE":      "uscentral-5",
 					"GKE-CLUSTER":   "test-gke-cluster",
@@ -308,12 +284,10 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "node": {
-    "id": "projects/123456789012345/networks/mesh:testmesh/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "id": "projects/123456789012345/networks/mesh:testmesh/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault",
       "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
         "GCE-VM": "test-gce-vm",
         "GCP-ZONE": "uscentral-5",
@@ -326,42 +300,19 @@ func TestGenerate(t *testing.T) {
     "locality": {
       "zone": "uscentral-5"
     }
-  }
-}`,
-		},
-		{
-			desc: "configMesh specified with v2 config",
-			input: configInput{
-				xdsServerUri:      "example.com:443",
-				gcpProjectNumber:  123456789012345,
-				vpcNetworkName:    "thedefault",
-				ip:                "10.9.8.7",
-				zone:              "uscentral-5",
-				includeV3Features: false,
-				configMesh:        "testmesh",
-			},
-			wantOutput: `{
-  "xds_servers": [
-    {
-      "server_uri": "example.com:443",
-      "channel_creds": [
-        {
-          "type": "google_default"
-        }
-      ]
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "certificates.pem",
+        "private_key_file": "private_key.pem",
+        "ca_certificate_file": "ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
     }
-  ],
-  "node": {
-    "id": "52fdfc07-2182-454f-963f-5f0f9a621d72~10.9.8.7",
-    "cluster": "cluster",
-    "metadata": {
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
-    },
-    "locality": {
-      "zone": "uscentral-5"
-    }
-  }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
 }`,
 		},
 		{
@@ -373,7 +324,6 @@ func TestGenerate(t *testing.T) {
 				ip:                     "10.9.8.7",
 				zone:                   "uscentral-5",
 				ignoreResourceDeletion: true,
-				includeV3Features:      true,
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -391,17 +341,27 @@ func TestGenerate(t *testing.T) {
     }
   ],
   "node": {
-    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
-      "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+      "INSTANCE_IP": "10.9.8.7"
     },
     "locality": {
       "zone": "uscentral-5"
     }
-  }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "certificates.pem",
+        "private_key_file": "private_key.pem",
+        "ca_certificate_file": "ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
 }`,
 		},
 		{
@@ -412,7 +372,6 @@ func TestGenerate(t *testing.T) {
 				vpcNetworkName:             "thedefault",
 				ip:                         "10.9.8.7",
 				zone:                       "uscentral-5",
-				includeV3Features:          true,
 				includeDirectPathAuthority: true,
 				ipv6Capable:                true,
 			},
@@ -450,18 +409,28 @@ func TestGenerate(t *testing.T) {
     }
   },
   "node": {
-    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true,
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true
     },
     "locality": {
       "zone": "uscentral-5"
     }
-  }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "certificates.pem",
+        "private_key_file": "private_key.pem",
+        "ca_certificate_file": "ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
 }`,
 		},
 		{
@@ -472,7 +441,6 @@ func TestGenerate(t *testing.T) {
 				vpcNetworkName:             "thedefault",
 				ip:                         "10.9.8.7",
 				zone:                       "uscentral-5",
-				includeV3Features:          true,
 				includeDirectPathAuthority: true,
 				ipv6Capable:                true,
 				includeXDSTPNameInLDS:      true,
@@ -514,18 +482,28 @@ func TestGenerate(t *testing.T) {
     }
   },
   "node": {
-    "id": "projects/123456789012345/networks/thedefault/nodes/9566c74d-1003-4c4d-bbbb-0407d1e2c649",
+    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true,
-      "TRAFFICDIRECTOR_GCP_PROJECT_NUMBER": "123456789012345",
-      "TRAFFICDIRECTOR_NETWORK_NAME": "thedefault"
+      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true
     },
     "locality": {
       "zone": "uscentral-5"
     }
-  }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "certificates.pem",
+        "private_key_file": "private_key.pem",
+        "ca_certificate_file": "ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
 }`,
 		},
 	}
