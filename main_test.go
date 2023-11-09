@@ -585,6 +585,62 @@ func TestGetClusterName(t *testing.T) {
 	}
 }
 
+func TestGetClusterLocality(t *testing.T) {
+	tests := []struct {
+		desc    string
+		handler func(http.ResponseWriter, *http.Request)
+		want    string
+		wantErr bool
+	}{
+		{
+			desc: "zonal_succeess",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Metadata-Flavor") != "Google" {
+					http.Error(w, "Missing Metadata-Flavor", http.StatusForbidden)
+					return
+				}
+				w.Write([]byte("us-west1-a"))
+			},
+			want: "us-west1-a",
+		},
+		{
+			desc: "regional_succeess",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Metadata-Flavor") != "Google" {
+					http.Error(w, "Missing Metadata-Flavor", http.StatusForbidden)
+					return
+				}
+				w.Write([]byte("us-west1"))
+			},
+			want: "us-west1",
+		},
+		{
+			desc: "no_response_from_server",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			mux := http.NewServeMux()
+			mux.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-locality", tt.handler)
+			server := httptest.NewServer(mux)
+			defer server.Close()
+			overrideHTTP(server)
+
+			got, err := getClusterLocality()
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("getClusterLocality() returned error: %s wantErr: %v", err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Fatalf("getClusterLocality() = %s want: %s", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetVMName(t *testing.T) {
 	server := httptest.NewServer(nil)
 	defer server.Close()
