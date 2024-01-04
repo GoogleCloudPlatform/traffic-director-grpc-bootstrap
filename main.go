@@ -27,7 +27,6 @@ import (
 	"path"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"td-grpc-bootstrap/csmnamer"
@@ -41,16 +40,16 @@ var (
 	gcpProjectNumber           = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
 	vpcNetworkName             = flag.String("vpc-network-name", "default", "VPC network name")
 	localityZone               = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
-	clusterLocality            = flag.String("cluster-locality-experimental", "", "the locality of the cluster to use, instead of retrieving it from the metadata server. When set, this locality value is used to generate mesh ID. The availability of a cluster can be deployed be zonal or regional. This flag is EXPERIMENTAL and may be changed or removed in a later release")
 	ignoreResourceDeletion     = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	secretsDir                 = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
 	includeDeploymentInfo      = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeClusterName             = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkePodName                 = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeNamespace               = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeLocation                = flag.String("gke-location-experimental", "", "the locality of the cluster from which to pull configuration, instead of retrieving it from the metadata server. Locality is used to generate the mesh ID. The availability of a cluster can be deployed be zonal or regional. This flag is EXPERIMENTAL and may be changed or removed in a later release")
 	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	generateMeshId             = flag.Bool("generate-mesh-id-experimental", false, "When enabled, the CSM MeshID is generated. If config-mesh-experimental flag is specified, this flag would be ignored. Zone and cluster name would be retrieved from the metadata server unless specified via locality-zone and gke-cluster-name-experimental flags respectively. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	generateMeshId             = flag.Bool("generate-mesh-id-experimental", false, "When enabled, the CSM MeshID is generated. If config-mesh-experimental flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location-experimental and gke-cluster-name-experimental flags respectively. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", true, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeXDSTPNameInLDS      = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use xdstp style name for listener resource name template. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
@@ -81,21 +80,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Warning: failed to determine host's ip: %s\n", err)
 	}
 
-	deploymentType := getDeploymentType()
-
 	// Retrieve zone from the metadata server only if not specified in args.
-	if *localityZone == "" {
-		*localityZone, err = getZone()
+	zone := *localityZone
+	if zone == "" {
+		zone, err = getZone()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
-		}
-	}
-
-	// Generate clusterName from metadata server or from command-line
-	// arguments, with the latter taking preference.
-	if *gkeClusterName == "" {
-		*gkeClusterName, err = getClusterName()
-		if err != nil && deploymentType == deploymentTypeGKE {
 			fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
 		}
 	}
@@ -104,15 +93,23 @@ func main() {
 	// arguments, with the latter taking preference.
 	var deploymentInfo map[string]string
 	if *includeDeploymentInfo {
-		switch deploymentType {
+		dType := getDeploymentType()
+		switch dType {
 		case deploymentTypeGKE:
+			cluster := *gkeClusterName
+			if cluster == "" {
+				cluster, err = getClusterName()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
+				}
+			}
 			pod := *gkePodName
 			if pod == "" {
 				pod = getPodName()
 			}
 			deploymentInfo = map[string]string{
-				"GKE-CLUSTER":   *gkeClusterName,
-				"GCP-ZONE":      *localityZone,
+				"GKE-CLUSTER":   cluster,
+				"GCP-ZONE":      zone,
 				"INSTANCE-IP":   ip,
 				"GKE-POD":       pod,
 				"GKE-NAMESPACE": *gkeNamespace,
@@ -124,7 +121,7 @@ func main() {
 			}
 			deploymentInfo = map[string]string{
 				"GCE-VM":      vmName,
-				"GCP-ZONE":    *localityZone,
+				"GCP-ZONE":    zone,
 				"INSTANCE-IP": ip,
 			}
 		default:
@@ -133,27 +130,31 @@ func main() {
 		}
 	}
 
-	if *configMesh == "" && *generateMeshId {
-		if *clusterLocality == "" {
-			*clusterLocality, err = getClusterLocality()
+	meshID := *configMesh
+	if meshID == "" && *generateMeshId {
+		clusterLocality := *gkeLocation
+		if clusterLocality == "" {
+			clusterLocality, err = getClusterLocality()
 			if err != nil {
-				// Cluster locality is required while using with generateMeshID.
-				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+				fmt.Fprintf(os.Stderr, "Error: unable to determine cluster locality from the metadata server with error: %s\n", err)
 				os.Exit(1)
 			}
 		}
-		if *gkeClusterName == "" {
-			// The metadata server would return an error when running on GCE VMs.
-			// gkeClusterName should be passed in when using generateMeshID in GCE
-			// VM cases.
-			fmt.Fprintf(os.Stderr, "Error: generate-mesh-id-experimental flag was supplied, but was unable to determine the current cluster from the metadata server with error: %s\n", err)
-			os.Exit(1)
+
+		cluster := *gkeClusterName
+		if cluster == "" {
+			cluster, err = getClusterName()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: generate-mesh-id-experimental flag was supplied, but was unable to determine the current cluster from the metadata server with error: %s\n", err)
+				os.Exit(1)
+			}
 		}
+
 		meshNamer := csmnamer.MeshNamer{
-			ClusterName: *gkeClusterName,
-			Location:    *clusterLocality,
+			ClusterName: cluster,
+			Location:    clusterLocality,
 		}
-		*configMesh = meshNamer.GenerateMeshId()
+		meshID = meshNamer.GenerateMeshId()
 	}
 
 	input := configInput{
@@ -161,12 +162,12 @@ func main() {
 		gcpProjectNumber:           *gcpProjectNumber,
 		vpcNetworkName:             *vpcNetworkName,
 		ip:                         ip,
-		zone:                       *localityZone,
+		zone:                       zone,
 		ignoreResourceDeletion:     *ignoreResourceDeletion,
 		secretsDir:                 *secretsDir,
 		metadataLabels:             nodeMetadata,
 		deploymentInfo:             deploymentInfo,
-		configMesh:                 *configMesh,
+		configMesh:                 meshID,
 		includeDirectPathAuthority: *includeDirectPathAuthority,
 		ipv6Capable:                isIPv6Capable(),
 		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
@@ -378,15 +379,7 @@ func getClusterLocality() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to determine GKE cluster locality: %s\n", err)
 	}
-	switch locality := string(locality); strings.Count(string(locality), "-") {
-	case 1:
-		// This means Regional avaliability. eg: us-west1.
-		return locality, nil
-	case 2:
-		// This means Zonal avaliability. eg: us-west1-a.
-		return locality, nil
-	}
-	return "", fmt.Errorf("GKE metadata server returned an invalid locality\n")
+	return string(locality), nil
 }
 
 // For overriding in unit tests.

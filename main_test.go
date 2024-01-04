@@ -617,6 +617,7 @@ func TestGetClusterLocality(t *testing.T) {
 		{
 			desc: "no_response_from_server",
 			handler: func(w http.ResponseWriter, r *http.Request) {
+				http.Error(w, "Error", http.StatusForbidden)
 			},
 			wantErr: true,
 		},
