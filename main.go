@@ -133,7 +133,7 @@ func main() {
 	meshId := *configMesh
 	if *generateMeshId {
 		if meshId != "" {
-			fmt.Fprint(os.Stderr, "Error: --config-Mesh flag cannot be specified while --generate-mesh-id is also set.\n")
+			fmt.Fprint(os.Stderr, "Error: --config-mesh-experimental flag cannot be specified while --generate-mesh-id-experimental is also set.\n")
 			os.Exit(1)
 		}
 
