@@ -46,7 +46,7 @@ var (
 	gkeClusterName             = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkePodName                 = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeNamespace               = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeLocation                = flag.String("gke-location-experimental", "", "the locality of the cluster from which to pull configuration, instead of retrieving it from the metadata server. Locality is used to generate the mesh ID. The availability of a cluster can be deployed be zonal or regional. This flag is EXPERIMENTAL and may be changed or removed in a later release")
+	gkeLocation                = flag.String("gke-location-experimental", "", "the location (region/zone) of the cluster from which to pull configuration, instead of retrieving it from the metadata server. Locality is used to generate the mesh ID. Ignored if not used with --generate-mesh-id-experimental. This flag is EXPERIMENTAL and may be changed or removed in a later release")
 	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	generateMeshId             = flag.Bool("generate-mesh-id-experimental", false, "When enabled, the CSM MeshID is generated. If config-mesh-experimental flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location-experimental and gke-cluster-name-experimental flags respectively. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
@@ -130,8 +130,8 @@ func main() {
 		}
 	}
 
-	meshID := *configMesh
-	if meshID == "" && *generateMeshId {
+	meshId := *configMesh
+	if meshId == "" && *generateMeshId {
 		clusterLocality := *gkeLocation
 		if clusterLocality == "" {
 			clusterLocality, err = getClusterLocality()
@@ -154,7 +154,7 @@ func main() {
 			ClusterName: cluster,
 			Location:    clusterLocality,
 		}
-		meshID = meshNamer.GenerateMeshId()
+		meshId = meshNamer.GenerateMeshId()
 	}
 
 	input := configInput{
@@ -167,7 +167,7 @@ func main() {
 		secretsDir:                 *secretsDir,
 		metadataLabels:             nodeMetadata,
 		deploymentInfo:             deploymentInfo,
-		configMesh:                 meshID,
+		configMesh:                 meshId,
 		includeDirectPathAuthority: *includeDirectPathAuthority,
 		ipv6Capable:                isIPv6Capable(),
 		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
