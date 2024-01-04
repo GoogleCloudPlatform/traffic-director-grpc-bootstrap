@@ -132,6 +132,10 @@ func main() {
 
 	meshId := *configMesh
 	if meshId == "" && *generateMeshId {
+		if meshId != "" {
+			fmt.Fprint(os.Stderr, "Error: --config-Mesh flag cannot be specified while --generate-mesh-id is also set.\n")
+			os.Exit(1)
+		}
 		clusterLocality := *gkeLocation
 		if clusterLocality == "" {
 			clusterLocality, err = getClusterLocality()
