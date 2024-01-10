@@ -125,7 +125,7 @@ func main() {
 				"INSTANCE-IP": ip,
 			}
 		default:
-			fmt.Fprintf(os.Stderr, "Error: unknown deployment type \n")
+			fmt.Fprint(os.Stderr, "Error: unknown deployment type \n")
 			os.Exit(1)
 		}
 	}
@@ -141,7 +141,7 @@ func main() {
 		if clusterLocality == "" {
 			clusterLocality, err = getClusterLocality()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: unable to determine cluster locality from the metadata server with error: %s\n", err)
+				fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: failed to determine GKE cluster locality: %s\n", err)
 				os.Exit(1)
 			}
 		}
@@ -150,7 +150,7 @@ func main() {
 		if cluster == "" {
 			cluster, err = getClusterName()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: generate-mesh-id-experimental flag was supplied, but was unable to determine the current cluster from the metadata server with error: %s\n", err)
+				fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: failed to determine GKE cluster name: %s\n", err)
 				os.Exit(1)
 			}
 		}
