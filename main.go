@@ -46,9 +46,10 @@ var (
 	gkeClusterName             = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkePodName                 = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeNamespace               = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeLocation                = flag.String("gke-location-experimental", "", "the location (region/zone) of the cluster from which to pull configuration, instead of retrieving it from the metadata server. Locality is used to generate the mesh ID. Ignored if not used with --generate-mesh-id-experimental. This flag is EXPERIMENTAL and may be changed or removed in a later release")
 	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	generateMeshId             = flag.Bool("generate-mesh-id-experimental", false, "When enabled, the CSM MeshID is generated. If config-mesh-experimental flag is specified, this flag would be ignored. Zone and cluster name would be retrieved from the metadata server unless specified via locality-zone and gke-cluster-name-experimental flags respectively. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	generateMeshId             = flag.Bool("generate-mesh-id-experimental", false, "When enabled, the CSM MeshID is generated. If config-mesh-experimental flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location-experimental and gke-cluster-name-experimental flags respectively. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", true, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeXDSTPNameInLDS      = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use xdstp style name for listener resource name template. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
@@ -64,6 +65,7 @@ func main() {
 		"alias of node-metadata. This flag is EXPERIMENTAL and will be removed in a later release")
 
 	flag.Parse()
+
 	if *gcpProjectNumber == 0 {
 		var err error
 		*gcpProjectNumber, err = getProjectId()
@@ -72,52 +74,38 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
 	ip, err := getHostIp()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to determine host's ip: %s\n", err)
-		ip = ""
 	}
+
 	// Retrieve zone from the metadata server only if not specified in args.
 	zone := *localityZone
 	if zone == "" {
 		zone, err = getZone()
 		if err != nil {
-			zone = ""
-			if *generateMeshId {
-				// Zone is required while using with generateMeshID.
-				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-				os.Exit(1)
-			}
 			fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
 		}
 	}
 
-	// Generate clusterName from metadata server or from command-line
-	// arguments, with the latter taking preference.
-	cluster := *gkeClusterName
-	var clusterErr error
-	if cluster == "" {
-		cluster, clusterErr = getClusterName()
-		if clusterErr != nil {
-			if *generateMeshId {
-				// The metadata server would return an error when running on GCE VMs.
-				// gkeClusterName should be passed in when using generateMeshID in GCE
-				// VM cases.
-				fmt.Fprintf(os.Stderr, "Error: generate-mesh-id-experimental flag was supplied, but was unable to determine the current cluster from the metadata server with error: %s\n", err)
-				os.Exit(1)
-			}
-			clusterErr = fmt.Errorf("Warning: %s\n", err)
-		}
-	}
 	// Generate deployment info from metadata server or from command-line
 	// arguments, with the latter taking preference.
 	var deploymentInfo map[string]string
 	if *includeDeploymentInfo {
-		dType := getDeploymentType()
+		dType, err := getDeploymentType()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: unable to determine deployment type: %s\n", err)
+			os.Exit(1)
+		}
 		switch dType {
 		case deploymentTypeGKE:
-			if clusterErr != nil {
-				fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
+			cluster := *gkeClusterName
+			if cluster == "" {
+				cluster, err = getClusterName()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
+				}
 			}
 			pod := *gkePodName
 			if pod == "" {
@@ -143,17 +131,36 @@ func main() {
 		}
 	}
 
-	var meshId string
+	meshId := *configMesh
 	if *generateMeshId {
+		if meshId != "" {
+			fmt.Fprint(os.Stderr, "Error: --config-mesh-experimental flag cannot be specified while --generate-mesh-id-experimental is also set.\n")
+			os.Exit(1)
+		}
+
+		clusterLocality := *gkeLocation
+		if clusterLocality == "" {
+			clusterLocality, err = getClusterLocality()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: %s\n", err)
+				os.Exit(1)
+			}
+		}
+
+		cluster := *gkeClusterName
+		if cluster == "" {
+			cluster, err = getClusterName()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: %s\n", err)
+				os.Exit(1)
+			}
+		}
+
 		meshNamer := csmnamer.MeshNamer{
 			ClusterName: cluster,
-			Location:    zone,
+			Location:    clusterLocality,
 		}
 		meshId = meshNamer.GenerateMeshId()
-	}
-	// Override meshId if configMesh is set.
-	if *configMesh != "" {
-		meshId = *configMesh
 	}
 
 	input := configInput{
@@ -368,9 +375,17 @@ func getProjectId() (int64, error) {
 func getClusterName() (string, error) {
 	cluster, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-name")
 	if err != nil {
-		return "", fmt.Errorf("failed to determine GKE cluster name: %s\n", err)
+		return "", fmt.Errorf("failed to determine GKE cluster name: %s", err)
 	}
 	return string(cluster), nil
+}
+
+func getClusterLocality() (string, error) {
+	locality, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-locality")
+	if err != nil {
+		return "", fmt.Errorf("failed to determine GKE cluster locality: %s", err)
+	}
+	return string(locality), nil
 }
 
 func getPodName() string {
