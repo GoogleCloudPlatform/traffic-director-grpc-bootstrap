@@ -93,7 +93,11 @@ func main() {
 	// arguments, with the latter taking preference.
 	var deploymentInfo map[string]string
 	if *includeDeploymentInfo {
-		dType := getDeploymentType()
+		dType, err := getDeploymentType()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: unable to determine deployment type: %s\n", err)
+			os.Exit(1)
+		}
 		switch dType {
 		case deploymentTypeGKE:
 			cluster := *gkeClusterName
@@ -124,9 +128,6 @@ func main() {
 				"GCP-ZONE":    zone,
 				"INSTANCE-IP": ip,
 			}
-		default:
-			fmt.Fprint(os.Stderr, "Error: unknown deployment type \n")
-			os.Exit(1)
 		}
 	}
 
@@ -141,7 +142,7 @@ func main() {
 		if clusterLocality == "" {
 			clusterLocality, err = getClusterLocality()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: failed to determine GKE cluster locality: %s\n", err)
+				fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: %s\n", err)
 				os.Exit(1)
 			}
 		}
@@ -150,7 +151,7 @@ func main() {
 		if cluster == "" {
 			cluster, err = getClusterName()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: failed to determine GKE cluster name: %s\n", err)
+				fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: %s\n", err)
 				os.Exit(1)
 			}
 		}
@@ -374,7 +375,7 @@ func getProjectId() (int64, error) {
 func getClusterName() (string, error) {
 	cluster, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-name")
 	if err != nil {
-		return "", fmt.Errorf("failed to determine GKE cluster name: %s\n", err)
+		return "", fmt.Errorf("failed to determine GKE cluster name: %s", err)
 	}
 	return string(cluster), nil
 }
@@ -382,7 +383,7 @@ func getClusterName() (string, error) {
 func getClusterLocality() (string, error) {
 	locality, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-locality")
 	if err != nil {
-		return "", fmt.Errorf("failed to determine GKE cluster locality: %s\n", err)
+		return "", fmt.Errorf("failed to determine GKE cluster locality: %s", err)
 	}
 	return string(locality), nil
 }

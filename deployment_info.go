@@ -15,6 +15,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -31,10 +32,10 @@ const (
 // getDeploymentType tries to talk the metadata server at
 // http://metadata.google.internal and uses a response header with key "Server"
 // to determine the deployment type.
-func getDeploymentType() deploymentType {
+func getDeploymentType() (deploymentType, error) {
 	parsedUrl, err := url.Parse("http://metadata.google.internal")
 	if err != nil {
-		return deploymentTypeUnknown
+		return deploymentTypeUnknown, err
 	}
 	client := &http.Client{Timeout: 5 * time.Second}
 	req := &http.Request{
@@ -44,7 +45,7 @@ func getDeploymentType() deploymentType {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return deploymentTypeUnknown
+		return deploymentTypeUnknown, err
 	}
 	resp.Body.Close()
 
@@ -53,10 +54,13 @@ func getDeploymentType() deploymentType {
 	for _, val := range vals {
 		switch val {
 		case "GKE Metadata Server":
-			return deploymentTypeGKE
+			return deploymentTypeGKE, nil
 		case "Metadata Server for VM":
-			return deploymentTypeGCE
+			return deploymentTypeGCE, nil
+		default:
+			return deploymentTypeUnknown, fmt.Errorf("unknown Server type: %s", val)
 		}
 	}
-	return deploymentTypeUnknown
+
+	return deploymentTypeUnknown, fmt.Errorf("no values in response header for key: %q", "Server")
 }
