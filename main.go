@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -388,11 +388,6 @@ func getClusterLocality() (string, error) {
 	return string(locality), nil
 }
 
-// For overriding in unit tests.
-var readHostNameFile = func() ([]byte, error) {
-	return ioutil.ReadFile("/etc/hostname")
-}
-
 func getPodName() string {
 	pod, err := os.Hostname()
 	if err != nil {
@@ -436,7 +431,7 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed communicating with metadata server: %w", err)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
 		return nil, fmt.Errorf("failed reading from metadata server: %w", err)
