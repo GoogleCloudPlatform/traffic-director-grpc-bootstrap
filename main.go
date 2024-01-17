@@ -164,17 +164,10 @@ func main() {
 		meshId = meshNamer.GenerateMeshId()
 	}
 
-	var gitCommitHash string
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		fmt.Fprintln(os.Stderr, "Error: unable to determine git commit hash from build information embedded in the running binary")
+	gitCommitHash, err := getGitCommitId()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: unable to determine git commit ID: %s\n", err)
 		os.Exit(1)
-	}
-	for _, setting := range info.Settings {
-		if setting.Key == "vcs.revision" {
-			gitCommitHash = setting.Value
-			break
-		}
 	}
 
 	input := configInput{
@@ -348,6 +341,19 @@ func generate(in configInput) ([]byte, error) {
 	}
 
 	return json.MarshalIndent(c, "", "  ")
+}
+
+func getGitCommitId() (string, error) {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "", fmt.Errorf("error calling debug.ReadBuildInfo")
+	}
+	for _, setting := range info.Settings {
+		if setting.Key == "vcs.revision" {
+			return setting.Value, nil
+		}
+	}
+	return "", fmt.Errorf("BuildInfo.Settings is missing vcs.revision")
 }
 
 func getHostIp() (string, error) {

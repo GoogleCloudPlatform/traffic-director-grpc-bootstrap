@@ -16,16 +16,60 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 )
+
+// Tests to see if the value generated for Node Metadata keyed with
+// `TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA` is the same as the git commit
+// ID of HEAD.
+func TestCommitShaIdInNodeMetadata(t *testing.T) {
+
+	// Build td-grpc-bootstrap binary.
+	cmd := exec.Command("go", "build", ".")
+	if _, err := cmd.Output(); err != nil {
+		t.Fatalf("Error building bootstrap generator: %s", err)
+	}
+
+	// We cannot stub the HTTP calls to Metadata server when executing the
+	// binary this way. Hence passing in arguments so that the generator to exit
+	// with error. Warnings are ignored. The generated config is unmarshalled to c.
+	runCmd := exec.Command("./td-grpc-bootstrap", "--gcp-project-number=1233445")
+	output, err := runCmd.Output()
+	if err != nil {
+		t.Fatalf("Error running bootstrap generator: %s", err)
+	}
+	c := config{}
+	if err = json.Unmarshal([]byte(output), &c); err != nil {
+		t.Fatalf("Error unmarshalling generated output: %s", err)
+	}
+	commitShaUsedInConfig, ok := c.Node.Metadata["TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA"]
+	if !ok {
+		t.Fatal("Error: Key TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA not found in generated config's Node Metadata")
+	}
+
+	// Use git to fetch commit ID of HEAD.
+	gitCmd := exec.Command("git", "rev-parse", "HEAD")
+	commitSha, err := gitCmd.Output()
+	if err != nil {
+		t.Fatalf("Error running git rev-parse: %s", err)
+	}
+	// Trim to remove the trailing new line from output.
+	commitShaFromGit := strings.TrimSpace(string(commitSha))
+
+	if diff := cmp.Diff(commitShaFromGit, commitShaUsedInConfig.(string)); diff != "" {
+		t.Fatalf("Error: Commit id in boostrap config (%s) does not match the expected ID (-want +got):\n%s", commitShaUsedInConfig, diff)
+	}
+}
 
 func TestValidate(t *testing.T) {
 	tests := []struct {
