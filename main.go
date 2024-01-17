@@ -26,6 +26,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -163,6 +164,19 @@ func main() {
 		meshId = meshNamer.GenerateMeshId()
 	}
 
+	var gitCommitHash string
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Error: unable read to the build information embedded in the running binary.")
+		os.Exit(1)
+	}
+	for _, setting := range info.Settings {
+		if setting.Key == "vcs.revision" {
+			gitCommitHash = setting.Value
+			break
+		}
+	}
+
 	input := configInput{
 		xdsServerUri:               *xdsServerUri,
 		gcpProjectNumber:           *gcpProjectNumber,
@@ -177,6 +191,7 @@ func main() {
 		includeDirectPathAuthority: *includeDirectPathAuthority,
 		ipv6Capable:                isIPv6Capable(),
 		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
+		gitCommitHash:              gitCommitHash,
 	}
 
 	if err := validate(input); err != nil {
@@ -230,6 +245,7 @@ type configInput struct {
 	includeDirectPathAuthority bool
 	ipv6Capable                bool
 	includeXDSTPNameInLDS      bool
+	gitCommitHash              string
 }
 
 func validate(in configInput) error {
@@ -270,6 +286,7 @@ func generate(in configInput) ([]byte, error) {
 			},
 			Metadata: map[string]interface{}{
 				"INSTANCE_IP": in.ip,
+				"TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": in.gitCommitHash,
 			},
 		},
 	}

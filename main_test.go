@@ -99,6 +99,7 @@ func TestGenerate(t *testing.T) {
 				ip:               "10.9.8.7",
 				zone:             "uscentral-5",
 				metadataLabels:   map[string]string{"k1": "v1", "k2": "v2"},
+				gitCommitHash:    "7202b7c611ebd6d382b7b0240f50e9824200bffd",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -119,6 +120,7 @@ func TestGenerate(t *testing.T) {
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd",
       "k1": "v1",
       "k2": "v2"
     },
@@ -149,6 +151,7 @@ func TestGenerate(t *testing.T) {
 				ip:               "10.9.8.7",
 				zone:             "uscentral-5",
 				secretsDir:       "/secrets/dir/",
+				gitCommitHash:    "7202b7c611ebd6d382b7b0240f50e9824200bffd",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -168,7 +171,8 @@ func TestGenerate(t *testing.T) {
     "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
-      "INSTANCE_IP": "10.9.8.7"
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd"
     },
     "locality": {
       "zone": "uscentral-5"
@@ -204,6 +208,7 @@ func TestGenerate(t *testing.T) {
 					"INSTANCE-IP":   "10.9.8.7",
 					"GCE-VM":        "test-gce-vm",
 				},
+				gitCommitHash: "7202b7c611ebd6d382b7b0240f50e9824200bffd",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -224,6 +229,7 @@ func TestGenerate(t *testing.T) {
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd",
       "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
         "GCE-VM": "test-gce-vm",
         "GCP-ZONE": "uscentral-5",
@@ -267,7 +273,8 @@ func TestGenerate(t *testing.T) {
 					"INSTANCE-IP":   "10.9.8.7",
 					"GCE-VM":        "test-gce-vm",
 				},
-				configMesh: "testmesh",
+				configMesh:    "testmesh",
+				gitCommitHash: "7202b7c611ebd6d382b7b0240f50e9824200bffd",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -288,6 +295,7 @@ func TestGenerate(t *testing.T) {
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd",
       "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
         "GCE-VM": "test-gce-vm",
         "GCP-ZONE": "uscentral-5",
@@ -324,6 +332,7 @@ func TestGenerate(t *testing.T) {
 				ip:                     "10.9.8.7",
 				zone:                   "uscentral-5",
 				ignoreResourceDeletion: true,
+				gitCommitHash:          "7202b7c611ebd6d382b7b0240f50e9824200bffd",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -344,7 +353,8 @@ func TestGenerate(t *testing.T) {
     "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
-      "INSTANCE_IP": "10.9.8.7"
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd"
     },
     "locality": {
       "zone": "uscentral-5"
@@ -374,6 +384,7 @@ func TestGenerate(t *testing.T) {
 				zone:                       "uscentral-5",
 				includeDirectPathAuthority: true,
 				ipv6Capable:                true,
+				gitCommitHash:              "7202b7c611ebd6d382b7b0240f50e9824200bffd",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -413,7 +424,8 @@ func TestGenerate(t *testing.T) {
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true
+      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true,
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd"
     },
     "locality": {
       "zone": "uscentral-5"
@@ -444,6 +456,7 @@ func TestGenerate(t *testing.T) {
 				includeDirectPathAuthority: true,
 				ipv6Capable:                true,
 				includeXDSTPNameInLDS:      true,
+				gitCommitHash:              "7202b7c611ebd6d382b7b0240f50e9824200bffd",
 			},
 			wantOutput: `{
   "xds_servers": [
@@ -486,7 +499,8 @@ func TestGenerate(t *testing.T) {
     "cluster": "cluster",
     "metadata": {
       "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true
+      "TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE": true,
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd"
     },
     "locality": {
       "zone": "uscentral-5"
