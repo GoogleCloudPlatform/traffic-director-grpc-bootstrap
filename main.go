@@ -167,7 +167,7 @@ func main() {
 	var gitCommitHash string
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
-		fmt.Fprintf(os.Stderr, "Error: unable read to the build information embedded in the running binary.")
+		fmt.Fprintln(os.Stderr, "Error: unable read to the build information embedded in the running binary")
 		os.Exit(1)
 	}
 	for _, setting := range info.Settings {
