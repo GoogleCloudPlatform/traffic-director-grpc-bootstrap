@@ -16,7 +16,7 @@ steps:
 - name: golang:1.21
   args: ['go', 'build', '.']
 - name: golang:1.21
-  args: ['go', 'test', './...']
+  args: ['go', 'test', './...', "-buildvcs=true"]
 - name: alpine
   args: ['./tools/package.sh', '$COMMIT_SHA']
 - name: gcr.io/cloud-builders/docker

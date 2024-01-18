@@ -17,4 +17,4 @@ jobs:
           go-version: 1.21
 
       - name: Run tests
-        run: go test -v ./...
+        run: go test -v ./... -buildvcs=true
