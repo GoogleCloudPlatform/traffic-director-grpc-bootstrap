@@ -26,6 +26,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -163,6 +164,12 @@ func main() {
 		meshId = meshNamer.GenerateMeshId()
 	}
 
+	gitCommitHash, err := getGitCommitId()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: unable to determine git commit ID: %s\n", err)
+		os.Exit(1)
+	}
+
 	input := configInput{
 		xdsServerUri:               *xdsServerUri,
 		gcpProjectNumber:           *gcpProjectNumber,
@@ -177,6 +184,7 @@ func main() {
 		includeDirectPathAuthority: *includeDirectPathAuthority,
 		ipv6Capable:                isIPv6Capable(),
 		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
+		gitCommitHash:              gitCommitHash,
 	}
 
 	if err := validate(input); err != nil {
@@ -230,6 +238,7 @@ type configInput struct {
 	includeDirectPathAuthority bool
 	ipv6Capable                bool
 	includeXDSTPNameInLDS      bool
+	gitCommitHash              string
 }
 
 func validate(in configInput) error {
@@ -270,6 +279,7 @@ func generate(in configInput) ([]byte, error) {
 			},
 			Metadata: map[string]interface{}{
 				"INSTANCE_IP": in.ip,
+				"TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": in.gitCommitHash,
 			},
 		},
 	}
@@ -331,6 +341,19 @@ func generate(in configInput) ([]byte, error) {
 	}
 
 	return json.MarshalIndent(c, "", "  ")
+}
+
+func getGitCommitId() (string, error) {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "", fmt.Errorf("error calling debug.ReadBuildInfo")
+	}
+	for _, setting := range info.Settings {
+		if setting.Key == "vcs.revision" {
+			return setting.Value, nil
+		}
+	}
+	return "", fmt.Errorf("BuildInfo.Settings is missing vcs.revision")
 }
 
 func getHostIp() (string, error) {
