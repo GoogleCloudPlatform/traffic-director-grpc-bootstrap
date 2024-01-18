@@ -36,7 +36,7 @@ func TestGetGitCommitId(t *testing.T) {
 
 	re := regexp.MustCompile(`^[a-f0-9]{40}$`)
 	if !re.MatchString(commitId) {
-		t.Fatal("getGitCommitId(): returned an invalid commit ID. Want commit ID to be a valid SHA1 hash.")
+		t.Fatalf("getGitCommitId(): returned an invalid commit ID: %q. Want commit ID to be a valid SHA1 hash.", commitId)
 	}
 }
 
