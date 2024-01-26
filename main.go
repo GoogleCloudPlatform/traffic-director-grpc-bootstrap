@@ -404,7 +404,7 @@ func getClusterName() (string, error) {
 }
 
 func getClusterLocality() (string, error) {
-	locality, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-locality")
+	locality, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-location")
 	if err != nil {
 		return "", fmt.Errorf("failed to determine GKE cluster locality: %s", err)
 	}
