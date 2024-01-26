@@ -653,7 +653,7 @@ func TestGetClusterLocality(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			mux := http.NewServeMux()
-			mux.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-locality", tt.handler)
+			mux.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-location", tt.handler)
 			server := httptest.NewServer(mux)
 			defer server.Close()
 			overrideHTTP(server)
