@@ -36,23 +36,22 @@ import (
 )
 
 var (
-	xdsServerUri               = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
-	outputName                 = flag.String("output", "-", "output file name")
-	gcpProjectNumber           = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
-	vpcNetworkName             = flag.String("vpc-network-name", "default", "VPC network name")
-	localityZone               = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
-	ignoreResourceDeletion     = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	secretsDir                 = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
-	includeDeploymentInfo      = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeClusterName             = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkePodName                 = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeNamespace               = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeLocation                = flag.String("gke-location-experimental", "", "the location (region/zone) of the cluster from which to pull configuration, instead of retrieving it from the metadata server. Locality is used to generate the mesh ID. Ignored if not used with --generate-mesh-id-experimental. This flag is EXPERIMENTAL and may be changed or removed in a later release")
-	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	generateMeshId             = flag.Bool("generate-mesh-id-experimental", false, "When enabled, the CSM MeshID is generated. If config-mesh-experimental flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location-experimental and gke-cluster-name-experimental flags respectively. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", true, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	includeXDSTPNameInLDS      = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use xdstp style name for listener resource name template. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	xdsServerUri           = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
+	outputName             = flag.String("output", "-", "output file name")
+	gcpProjectNumber       = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
+	vpcNetworkName         = flag.String("vpc-network-name", "default", "VPC network name")
+	localityZone           = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
+	ignoreResourceDeletion = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	secretsDir             = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
+	includeDeploymentInfo  = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeClusterName         = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkePodName             = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeNamespace           = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeLocation            = flag.String("gke-location-experimental", "", "the location (region/zone) of the cluster from which to pull configuration, instead of retrieving it from the metadata server. Locality is used to generate the mesh ID. Ignored if not used with --generate-mesh-id-experimental. This flag is EXPERIMENTAL and may be changed or removed in a later release")
+	gceVM                  = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	configMesh             = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	generateMeshId         = flag.Bool("generate-mesh-id-experimental", false, "When enabled, the CSM MeshID is generated. If config-mesh-experimental flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location-experimental and gke-cluster-name-experimental flags respectively. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	includeXDSTPNameInLDS  = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use xdstp style name for listener resource name template. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -171,20 +170,19 @@ func main() {
 	}
 
 	input := configInput{
-		xdsServerUri:               *xdsServerUri,
-		gcpProjectNumber:           *gcpProjectNumber,
-		vpcNetworkName:             *vpcNetworkName,
-		ip:                         ip,
-		zone:                       zone,
-		ignoreResourceDeletion:     *ignoreResourceDeletion,
-		secretsDir:                 *secretsDir,
-		metadataLabels:             nodeMetadata,
-		deploymentInfo:             deploymentInfo,
-		configMesh:                 meshId,
-		includeDirectPathAuthority: *includeDirectPathAuthority,
-		ipv6Capable:                isIPv6Capable(),
-		includeXDSTPNameInLDS:      *includeXDSTPNameInLDS,
-		gitCommitHash:              gitCommitHash,
+		xdsServerUri:           *xdsServerUri,
+		gcpProjectNumber:       *gcpProjectNumber,
+		vpcNetworkName:         *vpcNetworkName,
+		ip:                     ip,
+		zone:                   zone,
+		ignoreResourceDeletion: *ignoreResourceDeletion,
+		secretsDir:             *secretsDir,
+		metadataLabels:         nodeMetadata,
+		deploymentInfo:         deploymentInfo,
+		configMesh:             meshId,
+		ipv6Capable:            isIPv6Capable(),
+		includeXDSTPNameInLDS:  *includeXDSTPNameInLDS,
+		gitCommitHash:          gitCommitHash,
 	}
 
 	if err := validate(input); err != nil {
@@ -225,20 +223,19 @@ func main() {
 }
 
 type configInput struct {
-	xdsServerUri               string
-	gcpProjectNumber           int64
-	vpcNetworkName             string
-	ip                         string
-	zone                       string
-	ignoreResourceDeletion     bool
-	secretsDir                 string
-	metadataLabels             map[string]string
-	deploymentInfo             map[string]string
-	configMesh                 string
-	includeDirectPathAuthority bool
-	ipv6Capable                bool
-	includeXDSTPNameInLDS      bool
-	gitCommitHash              string
+	xdsServerUri           string
+	gcpProjectNumber       int64
+	vpcNetworkName         string
+	ip                     string
+	zone                   string
+	ignoreResourceDeletion bool
+	secretsDir             string
+	metadataLabels         map[string]string
+	deploymentInfo         map[string]string
+	configMesh             string
+	ipv6Capable            bool
+	includeXDSTPNameInLDS  bool
+	gitCommitHash          string
 }
 
 func validate(in configInput) error {
@@ -282,6 +279,7 @@ func generate(in configInput) ([]byte, error) {
 				"TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": in.gitCommitHash,
 			},
 		},
+		Authorities: make(map[string]Authority),
 	}
 
 	for k, v := range in.metadataLabels {
@@ -309,9 +307,6 @@ func generate(in configInput) ([]byte, error) {
 	}
 
 	if in.includeXDSTPNameInLDS {
-		if c.Authorities == nil {
-			c.Authorities = make(map[string]Authority)
-		}
 		tdAuthority := "traffic-director-global.xds.googleapis.com"
 		c.Authorities[tdAuthority] = Authority{
 			// Listener Resource Name format for normal TD usecases looks like:
@@ -320,24 +315,19 @@ func generate(in configInput) ([]byte, error) {
 		}
 	}
 
-	if in.includeDirectPathAuthority {
-		if c.Authorities == nil {
-			c.Authorities = make(map[string]Authority)
-		}
-		c2pAuthority := "traffic-director-c2p.xds.googleapis.com"
-		c.Authorities[c2pAuthority] = Authority{
-			// In the case of DirectPath, it is safe to assume that the operator is notified of missing resources.
-			// In other words, "ignore_resource_deletion" server_features is always set.
-			XdsServers: []server{{
-				ServerUri:      "dns:///directpath-pa.googleapis.com",
-				ChannelCreds:   []creds{{Type: "google_default"}},
-				ServerFeatures: []string{"xds_v3", "ignore_resource_deletion"},
-			}},
-			ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority),
-		}
-		if in.ipv6Capable {
-			c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
-		}
+	c2pAuthority := "traffic-director-c2p.xds.googleapis.com"
+	c.Authorities[c2pAuthority] = Authority{
+		// In the case of DirectPath, it is safe to assume that the operator is notified of missing resources.
+		// In other words, "ignore_resource_deletion" server_features is always set.
+		XdsServers: []server{{
+			ServerUri:      "dns:///directpath-pa.googleapis.com",
+			ChannelCreds:   []creds{{Type: "google_default"}},
+			ServerFeatures: []string{"xds_v3", "ignore_resource_deletion"},
+		}},
+		ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%%s", c2pAuthority),
+	}
+	if in.ipv6Capable {
+		c.Node.Metadata["TRAFFICDIRECTOR_DIRECTPATH_C2P_IPV6_CAPABLE"] = true
 	}
 
 	return json.MarshalIndent(c, "", "  ")
