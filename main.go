@@ -44,13 +44,13 @@ var (
 	ignoreResourceDeletion     = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	secretsDir                 = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
 	includeDeploymentInfo      = flag.Bool("include-deployment-info-experimental", false, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeClusterName             = flag.String("gke-cluster-name-experimental", "", "GKE cluster name to use, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeClusterName             = flag.String("gke-cluster-name", "", "GKE cluster name to use, instead of retrieving it from the metadata server.")
 	gkePodName                 = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeNamespace               = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeLocation                = flag.String("gke-location-experimental", "", "the location (region/zone) of the cluster from which to pull configuration, instead of retrieving it from the metadata server. Locality is used to generate the mesh ID. Ignored if not used with --generate-mesh-id-experimental. This flag is EXPERIMENTAL and may be changed or removed in a later release")
+	gkeLocation                = flag.String("gke-location-experimental", "", "the location (region/zone) of the cluster from which to pull configuration, instead of retrieving it from the metadata server. This value is used to generate the mesh ID. Ignored if not used with --generate-mesh-id. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	configMesh                 = flag.String("config-mesh-experimental", "", "Dictates which Mesh resource to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	generateMeshId             = flag.Bool("generate-mesh-id-experimental", false, "When enabled, the CSM MeshID is generated. If config-mesh-experimental flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location-experimental and gke-cluster-name-experimental flags respectively. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	configMesh                 = flag.String("config-mesh", "", "Dictates which Mesh resource to use.")
+	generateMeshId             = flag.Bool("generate-mesh-id", false, "When enabled, the CSM MeshID is generated. If config-mesh flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location and gke-cluster-name flags respectively.")
 	includeDirectPathAuthority = flag.Bool("include-directpath-authority-experimental", true, "whether or not to include DirectPath TD authority for xDS Federation. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	includeXDSTPNameInLDS      = flag.Bool("include-xdstp-name-in-lds-experimental", false, "whether or not to use xdstp style name for listener resource name template. Ignored if not used with include-federation-support-experimental flag. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
@@ -64,6 +64,12 @@ func main() {
 		"alias of secrets-dir. This flag is EXPERIMENTAL and will be removed in a later release")
 	flag.Var(flag.Lookup("node-metadata").Value, "node-metadata-experimental",
 		"alias of node-metadata. This flag is EXPERIMENTAL and will be removed in a later release")
+	flag.Var(flag.Lookup("gke-cluster-name").Value, "gke-cluster-name-experimental",
+		"alias of gke-cluster-name. This flag is EXPERIMENTAL and will be removed in a later release")
+	flag.Var(flag.Lookup("generate-mesh-id").Value, "generate-mesh-id-experimental",
+		"alias of generate-mesh-id. This flag is EXPERIMENTAL and will be removed in a later release")
+	flag.Var(flag.Lookup("config-mesh").Value, "config-mesh-experimental",
+		"alias of config-mesh. This flag is EXPERIMENTAL and will be removed in a later release")
 
 	flag.Parse()
 
@@ -135,7 +141,7 @@ func main() {
 	meshId := *configMesh
 	if *generateMeshId {
 		if meshId != "" {
-			fmt.Fprint(os.Stderr, "Error: --config-mesh-experimental flag cannot be specified while --generate-mesh-id-experimental is also set.\n")
+			fmt.Fprint(os.Stderr, "Error: --config-mesh flag cannot be specified while --generate-mesh-id is also set.\n")
 			os.Exit(1)
 		}
 
