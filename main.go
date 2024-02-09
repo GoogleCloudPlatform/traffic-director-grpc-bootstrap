@@ -319,6 +319,7 @@ func generate(in configInput) ([]byte, error) {
 			// xdstp://<authority>/envoy.config.listener.v3.Listener/<project_number>/<(network)|(mesh:mesh_name)>/id
 			ClientListenerResourceNameTemplate: fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%d/%s/%%s", tdAuthority, in.gcpProjectNumber, networkIdentifier),
 		}
+		c.ClientDefaultListenerResourceNameTemplate = fmt.Sprintf("xdstp://%s/envoy.config.listener.v3.Listener/%d/%s/%%s", tdAuthority, in.gcpProjectNumber, networkIdentifier)
 	}
 
 	c2pAuthority := "traffic-director-c2p.xds.googleapis.com"
@@ -462,11 +463,12 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 }
 
 type config struct {
-	XdsServers                         []server                             `json:"xds_servers,omitempty"`
-	Authorities                        map[string]Authority                 `json:"authorities,omitempty"`
-	Node                               *node                                `json:"node,omitempty"`
-	CertificateProviders               map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
-	ServerListenerResourceNameTemplate string                               `json:"server_listener_resource_name_template,omitempty"`
+	XdsServers                                []server                             `json:"xds_servers,omitempty"`
+	Authorities                               map[string]Authority                 `json:"authorities,omitempty"`
+	Node                                      *node                                `json:"node,omitempty"`
+	CertificateProviders                      map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
+	ServerListenerResourceNameTemplate        string                               `json:"server_listener_resource_name_template,omitempty"`
+	ClientDefaultListenerResourceNameTemplate string                               `json:"client_default_listener_resource_name_template,omitempty"`
 }
 
 type server struct {
