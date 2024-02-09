@@ -553,7 +553,8 @@ func TestGenerate(t *testing.T) {
       }
     }
   },
-  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s",
+  "client_default_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/thedefault/%s"
 }`,
 		},
 	}
