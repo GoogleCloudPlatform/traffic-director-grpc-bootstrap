@@ -95,6 +95,22 @@ func main() {
 		}
 	}
 
+	clusterName := *gkeClusterName
+	if clusterName == "" {
+		clusterName, err = getClusterName()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: unable to determine cluster name: %s\n", err)
+		}
+	}
+
+	clusterLocation := *gkeLocation
+	if clusterLocation == "" {
+		clusterLocation, err = getClusterLocality()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: unable to determine cluster locality: %s\n", err)
+		}
+	}
+
 	// Generate deployment info from metadata server or from command-line
 	// arguments, with the latter taking preference.
 	var deploymentInfo map[string]string
@@ -106,19 +122,15 @@ func main() {
 		}
 		switch dType {
 		case deploymentTypeGKE:
-			cluster := *gkeClusterName
-			if cluster == "" {
-				cluster, err = getClusterName()
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
-				}
-			}
 			pod := *gkePodName
 			if pod == "" {
 				pod = getPodName()
 			}
+			if clusterName == "" {
+				fmt.Fprint(os.Stderr, "Warning: Generating deployment info for GKE without cluster name\n")
+			}
 			deploymentInfo = map[string]string{
-				"GKE-CLUSTER":   cluster,
+				"GKE-CLUSTER":   clusterName,
 				"GCP-ZONE":      zone,
 				"INSTANCE-IP":   ip,
 				"GKE-POD":       pod,
@@ -144,27 +156,19 @@ func main() {
 			os.Exit(1)
 		}
 
-		clusterLocality := *gkeLocation
-		if clusterLocality == "" {
-			clusterLocality, err = getClusterLocality()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: %s\n", err)
-				os.Exit(1)
-			}
+		if clusterLocation == "" {
+			fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: failed to determine GKE cluster location\n")
+			os.Exit(1)
 		}
 
-		cluster := *gkeClusterName
-		if cluster == "" {
-			cluster, err = getClusterName()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: %s\n", err)
-				os.Exit(1)
-			}
+		if clusterName == "" {
+			fmt.Fprintf(os.Stderr, "Error: unable to generate mesh id: failed to determine GKE cluster name\n")
+			os.Exit(1)
 		}
 
 		meshNamer := csmnamer.MeshNamer{
-			ClusterName: cluster,
-			Location:    clusterLocality,
+			ClusterName: clusterName,
+			Location:    clusterLocation,
 		}
 		meshId = meshNamer.GenerateMeshId()
 	}
@@ -189,6 +193,8 @@ func main() {
 		ipv6Capable:            isIPv6Capable(),
 		includeXDSTPNameInLDS:  *includeXDSTPNameInLDS,
 		gitCommitHash:          gitCommitHash,
+		clusterName:            clusterName,
+		clusterLocation:        clusterLocation,
 	}
 
 	if err := validate(input); err != nil {
@@ -242,6 +248,8 @@ type configInput struct {
 	ipv6Capable            bool
 	includeXDSTPNameInLDS  bool
 	gitCommitHash          string
+	clusterName            string
+	clusterLocation        string
 }
 
 func validate(in configInput) error {
@@ -290,6 +298,14 @@ func generate(in configInput) ([]byte, error) {
 
 	for k, v := range in.metadataLabels {
 		c.Node.Metadata[k] = v
+	}
+
+	// Add GKE Cluster name and Cluster location to node metadata.
+	if in.clusterName != "" {
+		c.Node.Metadata["GKE_CLUSTER_NAME"] = in.clusterName
+	}
+	if in.clusterLocation != "" {
+		c.Node.Metadata["GKE_CLUSTER_LOCATION"] = in.clusterLocation
 	}
 
 	// For PSM Security.

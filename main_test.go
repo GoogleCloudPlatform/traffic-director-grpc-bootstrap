@@ -557,6 +557,95 @@ func TestGenerate(t *testing.T) {
   "client_default_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/thedefault/%s"
 }`,
 		},
+		{
+			desc: "with cluster namea and location specified",
+			input: configInput{
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
+				deploymentInfo: map[string]string{
+					"GCP-ZONE":      "uscentral-5",
+					"GKE-CLUSTER":   "test-gke-cluster",
+					"GKE-NAMESPACE": "test-gke-namespace",
+					"GKE-POD":       "test-gke-pod",
+					"INSTANCE-IP":   "10.9.8.7",
+					"GCE-VM":        "test-gce-vm",
+				},
+				configMesh:      "testmesh",
+				gitCommitHash:   "7202b7c611ebd6d382b7b0240f50e9824200bffd",
+				clusterName:     "test-cluster",
+				clusterLocation: "us-unknown-c",
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "authorities": {
+    "traffic-director-c2p.xds.googleapis.com": {
+      "xds_servers": [
+        {
+          "server_uri": "dns:///directpath-pa.googleapis.com",
+          "channel_creds": [
+            {
+              "type": "google_default"
+            }
+          ],
+          "server_features": [
+            "xds_v3",
+            "ignore_resource_deletion"
+          ]
+        }
+      ],
+      "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+    }
+  },
+  "node": {
+    "id": "projects/123456789012345/networks/mesh:testmesh/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
+    "cluster": "cluster",
+    "metadata": {
+      "GKE_CLUSTER_LOCATION": "us-unknown-c",
+      "GKE_CLUSTER_NAME": "test-cluster",
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd",
+      "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
+        "GCE-VM": "test-gce-vm",
+        "GCP-ZONE": "uscentral-5",
+        "GKE-CLUSTER": "test-gke-cluster",
+        "GKE-NAMESPACE": "test-gke-namespace",
+        "GKE-POD": "test-gke-pod",
+        "INSTANCE-IP": "10.9.8.7"
+      }
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "certificates.pem",
+        "private_key_file": "private_key.pem",
+        "ca_certificate_file": "ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
+}`,
+		},
 	}
 
 	for _, test := range tests {
