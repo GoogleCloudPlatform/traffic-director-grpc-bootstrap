@@ -558,7 +558,7 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
-			desc: "with cluster namea and location specified",
+			desc: "with GKE cluster name and location specified",
 			input: configInput{
 				xdsServerUri:     "example.com:443",
 				gcpProjectNumber: 123456789012345,
