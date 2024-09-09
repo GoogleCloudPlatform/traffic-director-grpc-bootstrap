@@ -124,7 +124,8 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "server_features": [
-        "xds_v3", "trusted_xds_server"
+        "xds_v3",
+        "trusted_xds_server"
       ]
     }
   ],
@@ -195,7 +196,8 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "server_features": [
-        "xds_v3", "trusted_xds_server"
+        "xds_v3",
+        "trusted_xds_server"
       ]
     }
   ],
@@ -271,7 +273,8 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "server_features": [
-        "xds_v3", "trusted_xds_server"
+        "xds_v3",
+        "trusted_xds_server"
       ]
     }
   ],
@@ -356,7 +359,8 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "server_features": [
-        "xds_v3", "trusted_xds_server"
+        "xds_v3",
+        "trusted_xds_server"
       ]
     }
   ],
@@ -434,8 +438,8 @@ func TestGenerate(t *testing.T) {
       ],
       "server_features": [
         "xds_v3",
-        "ignore_resource_deletion",
-        "trusted_xds_server"
+        "trusted_xds_server",
+        "ignore_resource_deletion"
       ]
     }
   ],
@@ -505,7 +509,8 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "server_features": [
-        "xds_v3", "trusted_xds_server"
+        "xds_v3",
+        "trusted_xds_server"
       ]
     }
   ],
