@@ -184,7 +184,7 @@ func main() {
 		}
 	}
 	if !added {
-		fmt.Fprintf(os.Stderr, "Warning: failed to determine GKE cluster name and location. \n")
+		fmt.Fprintf(os.Stderr, "Warning: failed to add GKE Cluster info to Node Metadata: Unable to contact GKE metadata server. \n")
 	}
 
 	input := configInput{
