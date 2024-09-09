@@ -175,11 +175,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	added := false
 	if cn, err := getClusterName(); err == nil {
 		if cl, err := getClusterLocality(); err == nil {
+			added = true
 			nodeMetadata["GKE_CLUSTER_NAME"] = cn
 			nodeMetadata["GKE_CLUSTER_LOCATION"] = cl
 		}
+	}
+	if !added {
+		fmt.Fprintf(os.Stderr, "Warning: failed to determine GKE cluster name and location. \n")
 	}
 
 	input := configInput{
