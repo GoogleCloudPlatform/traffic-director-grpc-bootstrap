@@ -259,8 +259,8 @@ func generate(in configInput) ([]byte, error) {
 		ChannelCreds: []creds{{Type: "google_default"}},
 	}
 
-	// Set xds_v3 Server Features.
-	xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3")
+	// Set xds_v3 and trusted Server Features.
+	xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3", "trusted_xds_server")
 
 	if in.ignoreResourceDeletion {
 		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "ignore_resource_deletion")
