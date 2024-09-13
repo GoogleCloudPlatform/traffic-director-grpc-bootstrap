@@ -127,12 +127,14 @@ func main() {
 				}
 			}
 			deploymentInfo = map[string]string{
-				"GKE-CLUSTER":   cluster,
-				"GKE-LOCATION":  clusterLocation,
-				"GCP-ZONE":      zone,
-				"INSTANCE-IP":   ip,
-				"GKE-POD":       pod,
-				"GKE-NAMESPACE": *gkeNamespace,
+				"GKE-CLUSTER":  cluster,
+				"GKE-LOCATION": clusterLocation,
+				"GCP-ZONE":     zone,
+				"INSTANCE-IP":  ip,
+				"GKE-POD":      pod,
+			}
+			if *gkeNamespace != "" {
+				deploymentInfo["GKE-NAMESPACE"] = *gkeNamespace
 			}
 		case deploymentTypeGCE:
 			vmName := *gceVM
