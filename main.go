@@ -110,15 +110,25 @@ func main() {
 			if cluster == "" {
 				cluster, err = getClusterName()
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
+					fmt.Fprintf(os.Stderr, "Error: generating deployment info: %s\n", err)
+					os.Exit(1)
 				}
 			}
 			pod := *gkePodName
 			if pod == "" {
 				pod = getPodName()
 			}
+			clusterLocation := *gkeLocation
+			if clusterLocation == "" {
+				clusterLocation, err = getClusterLocality()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error: generating deployment info: %s\n", err)
+					os.Exit(1)
+				}
+			}
 			deploymentInfo = map[string]string{
 				"GKE-CLUSTER":   cluster,
+				"GKE-LOCATION":  clusterLocation,
 				"GCP-ZONE":      zone,
 				"INSTANCE-IP":   ip,
 				"GKE-POD":       pod,
@@ -173,18 +183,6 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: unable to determine git commit ID: %s\n", err)
 		os.Exit(1)
-	}
-
-	added := false
-	if cn, err := getClusterName(); err == nil {
-		if cl, err := getClusterLocality(); err == nil {
-			added = true
-			nodeMetadata["GKE_CLUSTER_NAME"] = cn
-			nodeMetadata["GKE_CLUSTER_LOCATION"] = cl
-		}
-	}
-	if !added {
-		fmt.Fprintf(os.Stderr, "Warning: failed to add GKE Cluster info to Node Metadata: Unable to contact GKE metadata server. \n")
 	}
 
 	input := configInput{
