@@ -52,6 +52,7 @@ var (
 	configMesh             = flag.String("config-mesh", "", "Dictates which Mesh resource to use.")
 	generateMeshId         = flag.Bool("generate-mesh-id", false, "When enabled, the CSM MeshID is generated. If config-mesh flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location and gke-cluster-name flags respectively.")
 	includeXDSTPNameInLDS  = flag.Bool("include-xdstp-name-in-lds-experimental", true, "whether or not to use xdstp style name for listener resource name template. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	isTrustedXdsServer     = flag.Bool("is-trusted-xds-server", false, "Whether to include the server feature trusted_xds_server for TD.")
 )
 
 func main() {
@@ -189,6 +190,7 @@ func main() {
 		ipv6Capable:            isIPv6Capable(),
 		includeXDSTPNameInLDS:  *includeXDSTPNameInLDS,
 		gitCommitHash:          gitCommitHash,
+		isTrustedXdsServer:     *isTrustedXdsServer,
 	}
 
 	if err := validate(input); err != nil {
@@ -242,6 +244,7 @@ type configInput struct {
 	ipv6Capable            bool
 	includeXDSTPNameInLDS  bool
 	gitCommitHash          string
+	isTrustedXdsServer     bool
 }
 
 func validate(in configInput) error {
@@ -259,8 +262,11 @@ func generate(in configInput) ([]byte, error) {
 		ChannelCreds: []creds{{Type: "google_default"}},
 	}
 
-	// Set xds_v3 and trusted Server Features.
-	xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3", "trusted_xds_server")
+	// Set xds_v3.
+	xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3")
+	if in.isTrustedXdsServer {
+	  xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "trusted_xds_server")
+	}
 
 	if in.ignoreResourceDeletion {
 		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "ignore_resource_deletion")

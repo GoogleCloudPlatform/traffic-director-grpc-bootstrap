@@ -124,6 +124,78 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "authorities": {
+    "traffic-director-c2p.xds.googleapis.com": {
+      "xds_servers": [
+        {
+          "server_uri": "dns:///directpath-pa.googleapis.com",
+          "channel_creds": [
+            {
+              "type": "google_default"
+            }
+          ],
+          "server_features": [
+            "xds_v3",
+            "ignore_resource_deletion"
+          ]
+        }
+      ],
+      "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+    }
+  },
+  "node": {
+    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd",
+      "k1": "v1",
+      "k2": "v2"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "certificates.pem",
+        "private_key_file": "private_key.pem",
+        "ca_certificate_file": "ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s"
+}`,
+		},
+		{
+			desc: "Server feature for Trusted xds server",
+			input: configInput{
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
+				metadataLabels:   map[string]string{"k1": "v1", "k2": "v2"},
+				gitCommitHash:    "7202b7c611ebd6d382b7b0240f50e9824200bffd",
+				isTrustedXdsServer: true,
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
         "xds_v3",
         "trusted_xds_server"
       ]
@@ -196,8 +268,7 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "server_features": [
-        "xds_v3",
-        "trusted_xds_server"
+        "xds_v3"
       ]
     }
   ],
@@ -273,8 +344,7 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "server_features": [
-        "xds_v3",
-        "trusted_xds_server"
+        "xds_v3"
       ]
     }
   ],
@@ -359,8 +429,7 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "server_features": [
-        "xds_v3",
-        "trusted_xds_server"
+        "xds_v3"
       ]
     }
   ],
@@ -438,7 +507,6 @@ func TestGenerate(t *testing.T) {
       ],
       "server_features": [
         "xds_v3",
-        "trusted_xds_server",
         "ignore_resource_deletion"
       ]
     }
@@ -509,8 +577,7 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "server_features": [
-        "xds_v3",
-        "trusted_xds_server"
+        "xds_v3"
       ]
     }
   ],
