@@ -52,7 +52,7 @@ var (
 	configMesh             = flag.String("config-mesh", "", "Dictates which Mesh resource to use.")
 	generateMeshId         = flag.Bool("generate-mesh-id", false, "When enabled, the CSM MeshID is generated. If config-mesh flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location and gke-cluster-name flags respectively.")
 	includeXDSTPNameInLDS  = flag.Bool("include-xdstp-name-in-lds-experimental", true, "whether or not to use xdstp style name for listener resource name template. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	isTrustedXdsServer     = flag.Bool("is-trusted-xds-server", false, "Whether to include the server feature trusted_xds_server for TD.")
+	isTrustedXdsServer     = flag.Bool("is-trusted-xds-server-experimental", false, "Whether to include the server feature trusted_xds_server for TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
