@@ -48,6 +48,7 @@ var (
 	gkePodName             = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeNamespace           = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeLocation            = flag.String("gke-location-experimental", "", "the location (region/zone) of the GKE cluster, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeDeployment          = flag.String("gke-deployment-experimental", "", "GKE deployment to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gceVM                  = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh             = flag.String("config-mesh", "", "Dictates which Mesh resource to use.")
 	generateMeshId         = flag.Bool("generate-mesh-id", false, "When enabled, the CSM MeshID is generated. If config-mesh flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location and gke-cluster-name flags respectively.")
@@ -188,6 +189,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if *gkeNamespace != nil {
+		nodeMetadata["GOOGLE_INTERNAL_GSM_NAMESPACE"] = *gkeNamespace
+	}
+	if *gkDeployment != nil {
+		nodeMetadata["GOOGLE_INTERNAL_GSM_DEPLOYMENT"] = *gkeDeployment
+	}
+
 	input := configInput{
 		xdsServerUri:           *xdsServerUri,
 		gcpProjectNumber:       *gcpProjectNumber,
@@ -277,7 +285,7 @@ func generate(in configInput) ([]byte, error) {
 	// Set xds_v3.
 	xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3")
 	if in.isTrustedXdsServer {
-	  xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "trusted_xds_server")
+		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "trusted_xds_server")
 	}
 
 	if in.ignoreResourceDeletion {
