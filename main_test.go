@@ -181,12 +181,17 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "Server feature for Trusted xds server",
 			input: configInput{
-				xdsServerUri:       "example.com:443",
-				gcpProjectNumber:   123456789012345,
-				vpcNetworkName:     "thedefault",
-				ip:                 "10.9.8.7",
-				zone:               "uscentral-5",
-				metadataLabels:     map[string]string{"k1": "v1", "k2": "v2"},
+				xdsServerUri:     "example.com:443",
+				gcpProjectNumber: 123456789012345,
+				vpcNetworkName:   "thedefault",
+				ip:               "10.9.8.7",
+				zone:             "uscentral-5",
+				metadataLabels: map[string]string{
+					"k1":                             "v1",
+					"k2":                             "v2",
+					"GOOGLE_INTERNAL_GSM_NAMESPACE":  "test-ns",
+					"GOOGLE_INTERNAL_GSM_DEPLOYMENT": "test-deployment",
+				},
 				gitCommitHash:      "7202b7c611ebd6d382b7b0240f50e9824200bffd",
 				isTrustedXdsServer: true,
 			},
@@ -231,6 +236,8 @@ func TestGenerate(t *testing.T) {
     "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
     "cluster": "cluster",
     "metadata": {
+      "GOOGLE_INTERNAL_GSM_DEPLOYMENT": "test-deployment",
+      "GOOGLE_INTERNAL_GSM_NAMESPACE": "test-ns",
       "INSTANCE_IP": "10.9.8.7",
       "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd",
       "k1": "v1",
