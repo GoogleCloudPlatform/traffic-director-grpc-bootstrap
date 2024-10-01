@@ -180,13 +180,13 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "Server feature for Trusted xds server",
 			input: configInput{
-				xdsServerUri:     "example.com:443",
-				gcpProjectNumber: 123456789012345,
-				vpcNetworkName:   "thedefault",
-				ip:               "10.9.8.7",
-				zone:             "uscentral-5",
-				metadataLabels:   map[string]string{"k1": "v1", "k2": "v2"},
-				gitCommitHash:    "7202b7c611ebd6d382b7b0240f50e9824200bffd",
+				xdsServerUri:       "example.com:443",
+				gcpProjectNumber:   123456789012345,
+				vpcNetworkName:     "thedefault",
+				ip:                 "10.9.8.7",
+				zone:               "uscentral-5",
+				metadataLabels:     map[string]string{"k1": "v1", "k2": "v2"},
+				gitCommitHash:      "7202b7c611ebd6d382b7b0240f50e9824200bffd",
 				isTrustedXdsServer: true,
 			},
 			wantOutput: `{
@@ -221,6 +221,9 @@ func TestGenerate(t *testing.T) {
         }
       ],
       "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+    },
+    "traffic-director-global.xds.googleapis.com": {
+      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/thedefault/%s"
     }
   },
   "node": {
