@@ -51,6 +51,7 @@ var (
 	gceVM                  = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh             = flag.String("config-mesh", "", "Dictates which Mesh resource to use.")
 	generateMeshId         = flag.Bool("generate-mesh-id", false, "When enabled, the CSM MeshID is generated. If config-mesh flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location and gke-cluster-name flags respectively.")
+	isTrustedXdsServer     = flag.Bool("is-trusted-xds-server-experimental", false, "Whether to include the server feature trusted_xds_server for TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 func main() {
@@ -126,12 +127,14 @@ func main() {
 				}
 			}
 			deploymentInfo = map[string]string{
-				"GKE-CLUSTER":   cluster,
-				"GKE-LOCATION":  clusterLocation,
-				"GCP-ZONE":      zone,
-				"INSTANCE-IP":   ip,
-				"GKE-POD":       pod,
-				"GKE-NAMESPACE": *gkeNamespace,
+				"GKE-CLUSTER":  cluster,
+				"GKE-LOCATION": clusterLocation,
+				"GCP-ZONE":     zone,
+				"INSTANCE-IP":  ip,
+				"GKE-POD":      pod,
+			}
+			if *gkeNamespace != "" {
+				deploymentInfo["GKE-NAMESPACE"] = *gkeNamespace
 			}
 		case deploymentTypeGCE:
 			vmName := *gceVM
@@ -197,6 +200,7 @@ func main() {
 		configMesh:             meshId,
 		ipv6Capable:            isIPv6Capable(),
 		gitCommitHash:          gitCommitHash,
+		isTrustedXdsServer:     *isTrustedXdsServer,
 	}
 
 	if err := validate(input); err != nil {
@@ -249,6 +253,7 @@ type configInput struct {
 	configMesh             string
 	ipv6Capable            bool
 	gitCommitHash          string
+	isTrustedXdsServer     bool
 }
 
 func validate(in configInput) error {
@@ -271,6 +276,9 @@ func generate(in configInput) ([]byte, error) {
 	}
 	if in.ignoreResourceDeletion {
 		xs.ServerFeatures = append(xs.ServerFeatures, "ignore_resource_deletion")
+	}
+  if in.isTrustedXdsServer {
+	  xs.ServerFeatures = append(xs.ServerFeatures, "trusted_xds_server")
 	}
 	c.XdsServers = []server{xs}
 
