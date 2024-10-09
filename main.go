@@ -277,7 +277,7 @@ func generate(in configInput) ([]byte, error) {
 	// Set xds_v3.
 	xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3")
 	if in.isTrustedXdsServer {
-		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "trusted_xds_server")
+	  xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "trusted_xds_server")
 	}
 
 	if in.ignoreResourceDeletion {
