@@ -43,7 +43,6 @@ var (
 	localityZone           = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
 	ignoreResourceDeletion = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	secretsDir             = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
-	includeDeploymentInfo  = flag.Bool("include-deployment-info-experimental", true, "whether or not to generate config which contains deployment related information. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeClusterName         = flag.String("gke-cluster-name", "", "GKE cluster name to use, instead of retrieving it from the metadata server.")
 	gkePodName             = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gkeNamespace           = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
@@ -103,54 +102,51 @@ func main() {
 	// Generate deployment info from metadata server or from command-line
 	// arguments, with the latter taking preference.
 	var deploymentInfo map[string]string
-	if *includeDeploymentInfo {
-		dType, err := getDeploymentType()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: unable to determine deployment type: %s\n", err)
-			os.Exit(1)
+	dType, err := getDeploymentType()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: unable to determine deployment type: %s\n", err)
+	}
+	switch dType {
+	case deploymentTypeGKE:
+		cluster := *gkeClusterName
+		if cluster == "" {
+			cluster, err = getClusterName()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: generating deployment info: %s\n", err)
+				os.Exit(1)
+			}
 		}
-		switch dType {
-		case deploymentTypeGKE:
-			cluster := *gkeClusterName
-			if cluster == "" {
-				cluster, err = getClusterName()
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error: generating deployment info: %s\n", err)
-					os.Exit(1)
-				}
+		pod := *gkePodName
+		if pod == "" {
+			pod = getPodName()
+		}
+		clusterLocation := *gkeLocation
+		if clusterLocation == "" {
+			clusterLocation, err = getClusterLocality()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: generating deployment info: %s\n", err)
+				os.Exit(1)
 			}
-			pod := *gkePodName
-			if pod == "" {
-				pod = getPodName()
-			}
-			clusterLocation := *gkeLocation
-			if clusterLocation == "" {
-				clusterLocation, err = getClusterLocality()
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error: generating deployment info: %s\n", err)
-					os.Exit(1)
-				}
-			}
-			deploymentInfo = map[string]string{
-				"GKE-CLUSTER":  cluster,
-				"GKE-LOCATION": clusterLocation,
-				"GCP-ZONE":     zone,
-				"INSTANCE-IP":  ip,
-				"GKE-POD":      pod,
-			}
-			if *gkeNamespace != "" {
-				deploymentInfo["GKE-NAMESPACE"] = *gkeNamespace
-			}
-		case deploymentTypeGCE:
-			vmName := *gceVM
-			if vmName == "" {
-				vmName = getVMName()
-			}
-			deploymentInfo = map[string]string{
-				"GCE-VM":      vmName,
-				"GCP-ZONE":    zone,
-				"INSTANCE-IP": ip,
-			}
+		}
+		deploymentInfo = map[string]string{
+			"GKE-CLUSTER":  cluster,
+			"GKE-LOCATION": clusterLocation,
+			"GCP-ZONE":     zone,
+			"INSTANCE-IP":  ip,
+			"GKE-POD":      pod,
+		}
+		if *gkeNamespace != "" {
+			deploymentInfo["GKE-NAMESPACE"] = *gkeNamespace
+		}
+	case deploymentTypeGCE:
+		vmName := *gceVM
+		if vmName == "" {
+			vmName = getVMName()
+		}
+		deploymentInfo = map[string]string{
+			"GCE-VM":      vmName,
+			"GCP-ZONE":    zone,
+			"INSTANCE-IP": ip,
 		}
 	}
 
