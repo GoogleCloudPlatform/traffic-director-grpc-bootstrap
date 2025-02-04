@@ -686,7 +686,7 @@ func TestGetZone(t *testing.T) {
 	http.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/zone",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("Metadata-Flavor") != "Google" {
-				http.Error(w, "Missing Metadata-Flavor", 403)
+				http.Error(w, "Missing Metadata-Flavor", http.StatusForbidden)
 				return
 			}
 			w.Write([]byte("projects/123456789012345/zones/us-central5-c"))
