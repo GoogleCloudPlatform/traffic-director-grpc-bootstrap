@@ -686,7 +686,7 @@ func TestGetZone(t *testing.T) {
 	http.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/zone",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("Metadata-Flavor") != "Google" {
-				http.Error(w, "Missing Metadata-Flavor", 403)
+				http.Error(w, "Missing Metadata-Flavor", http.StatusForbidden)
 				return
 			}
 			w.Write([]byte("projects/123456789012345/zones/us-central5-c"))
@@ -708,7 +708,7 @@ func TestGetProjectId(t *testing.T) {
 	http.HandleFunc("metadata.google.internal/computeMetadata/v1/project/numeric-project-id",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("Metadata-Flavor") != "Google" {
-				http.Error(w, "Missing Metadata-Flavor", 403)
+				http.Error(w, "Missing Metadata-Flavor", http.StatusForbidden)
 				return
 			}
 			w.Write([]byte("123456789012345"))
@@ -730,7 +730,7 @@ func TestGetClusterName(t *testing.T) {
 	http.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/attributes/cluster-name",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("Metadata-Flavor") != "Google" {
-				http.Error(w, "Missing Metadata-Flavor", 403)
+				http.Error(w, "Missing Metadata-Flavor", http.StatusForbidden)
 				return
 			}
 			w.Write([]byte("test-cluster"))
@@ -805,7 +805,7 @@ func TestGetVMName(t *testing.T) {
 	http.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/name",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("Metadata-Flavor") != "Google" {
-				http.Error(w, "Missing Metadata-Flavor", 403)
+				http.Error(w, "Missing Metadata-Flavor", http.StatusForbidden)
 				return
 			}
 			w.Write([]byte("test-vm"))
@@ -825,7 +825,7 @@ func TestCheckIPv6Capable(t *testing.T) {
 			desc: "v6 enabled",
 			httpHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("Metadata-Flavor") != "Google" {
-					http.Error(w, "Missing Metadata-Flavor", 403)
+					http.Error(w, "Missing Metadata-Flavor", http.StatusForbidden)
 					return
 				}
 				w.Write([]byte("6970:7636:2061:6464:7265:7373:2062:6162"))
@@ -836,7 +836,6 @@ func TestCheckIPv6Capable(t *testing.T) {
 			desc: "v6 not enabled",
 			httpHandler: func(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Not Found", 404)
-				return
 			},
 			wantOutput: false,
 		},
