@@ -28,6 +28,7 @@ import (
 	"regexp"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"time"
 
 	"td-grpc-bootstrap/csmnamer"
@@ -36,21 +37,22 @@ import (
 )
 
 var (
-	xdsServerUri           = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
-	outputName             = flag.String("output", "-", "output file name")
-	gcpProjectNumber       = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
-	vpcNetworkName         = flag.String("vpc-network-name", "default", "VPC network name")
-	localityZone           = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
-	ignoreResourceDeletion = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	secretsDir             = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
-	gkeClusterName         = flag.String("gke-cluster-name", "", "GKE cluster name to use, instead of retrieving it from the metadata server.")
-	gkePodName             = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeNamespace           = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gkeLocation            = flag.String("gke-location-experimental", "", "the location (region/zone) of the GKE cluster, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	gceVM                  = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	configMesh             = flag.String("config-mesh", "", "Dictates which Mesh resource to use.")
-	generateMeshId         = flag.Bool("generate-mesh-id", false, "When enabled, the CSM MeshID is generated. If config-mesh flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location and gke-cluster-name flags respectively.")
-	isTrustedXdsServer     = flag.Bool("is-trusted-xds-server-experimental", false, "Whether to include the server feature trusted_xds_server for TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	xdsServerUri               = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
+	outputName                 = flag.String("output", "-", "output file name")
+	gcpProjectNumber           = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
+	vpcNetworkName             = flag.String("vpc-network-name", "default", "VPC network name")
+	localityZone               = flag.String("locality-zone", "", "the locality zone to use, instead of retrieving it from the metadata server. Useful when not running on GCP and/or for testing")
+	ignoreResourceDeletion     = flag.Bool("ignore-resource-deletion-experimental", false, "assume missing resources notify operators when using Traffic Director, as in gRFC A53. This is not currently the case. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	secretsDir                 = flag.String("secrets-dir", "/var/run/secrets/workload-spiffe-credentials", "path to a directory containing TLS certificates and keys required for PSM security")
+	gkeClusterName             = flag.String("gke-cluster-name", "", "GKE cluster name to use, instead of retrieving it from the metadata server.")
+	gkePodName                 = flag.String("gke-pod-name-experimental", "", "GKE pod name to use, instead of reading it from $HOSTNAME or /etc/hostname file. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeNamespace               = flag.String("gke-namespace-experimental", "", "GKE namespace to use. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gkeLocation                = flag.String("gke-location-experimental", "", "the location (region/zone) of the GKE cluster, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	configMesh                 = flag.String("config-mesh", "", "Dictates which Mesh resource to use.")
+	generateMeshId             = flag.Bool("generate-mesh-id", false, "When enabled, the CSM MeshID is generated. If config-mesh flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location and gke-cluster-name flags respectively.")
+	includeAllowedGrpcServices = flag.Bool("include-allowed-grpc-services-experimental", false, "When enabled, generates `allowed_grpc_services` map that includes current xDS Server URI. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	isTrustedXdsServer         = flag.Bool("is-trusted-xds-server-experimental", false, "Whether to include the server feature trusted_xds_server for TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 const (
@@ -189,19 +191,20 @@ func main() {
 	}
 
 	input := configInput{
-		xdsServerUri:           *xdsServerUri,
-		gcpProjectNumber:       *gcpProjectNumber,
-		vpcNetworkName:         *vpcNetworkName,
-		ip:                     ip,
-		zone:                   zone,
-		ignoreResourceDeletion: *ignoreResourceDeletion,
-		secretsDir:             *secretsDir,
-		metadataLabels:         nodeMetadata,
-		deploymentInfo:         deploymentInfo,
-		configMesh:             meshId,
-		ipv6Capable:            isIPv6Capable(),
-		gitCommitHash:          gitCommitHash,
-		isTrustedXdsServer:     *isTrustedXdsServer,
+		xdsServerUri:               *xdsServerUri,
+		gcpProjectNumber:           *gcpProjectNumber,
+		vpcNetworkName:             *vpcNetworkName,
+		ip:                         ip,
+		zone:                       zone,
+		ignoreResourceDeletion:     *ignoreResourceDeletion,
+		secretsDir:                 *secretsDir,
+		metadataLabels:             nodeMetadata,
+		deploymentInfo:             deploymentInfo,
+		configMesh:                 meshId,
+		ipv6Capable:                isIPv6Capable(),
+		gitCommitHash:              gitCommitHash,
+		isTrustedXdsServer:         *isTrustedXdsServer,
+		includeAllowedGrpcServices: *includeAllowedGrpcServices,
 	}
 
 	if err := validate(input); err != nil {
@@ -242,19 +245,20 @@ func main() {
 }
 
 type configInput struct {
-	xdsServerUri           string
-	gcpProjectNumber       int64
-	vpcNetworkName         string
-	ip                     string
-	zone                   string
-	ignoreResourceDeletion bool
-	secretsDir             string
-	metadataLabels         map[string]string
-	deploymentInfo         map[string]string
-	configMesh             string
-	ipv6Capable            bool
-	gitCommitHash          string
-	isTrustedXdsServer     bool
+	xdsServerUri               string
+	gcpProjectNumber           int64
+	vpcNetworkName             string
+	ip                         string
+	zone                       string
+	ignoreResourceDeletion     bool
+	secretsDir                 string
+	metadataLabels             map[string]string
+	deploymentInfo             map[string]string
+	configMesh                 string
+	ipv6Capable                bool
+	gitCommitHash              string
+	isTrustedXdsServer         bool
+	includeAllowedGrpcServices bool
 }
 
 func validate(in configInput) error {
@@ -338,6 +342,15 @@ func generate(in configInput) ([]byte, error) {
 				RefreshInterval: "600s",
 			},
 		},
+	}
+
+	// For Rate Limiting
+	if in.includeAllowedGrpcServices {
+		c.AllowedGrpcServices = map[string]allowedGrpcServiceConfig{
+			getQualifiedXdsUri(in.xdsServerUri): {
+				ChannelCreds: []creds{{Type: "google_default"}},
+			},
+		}
 	}
 
 	c.ServerListenerResourceNameTemplate = "grpc/server?xds.resource.listening_address=%s"
@@ -474,11 +487,19 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 	return body, nil
 }
 
+func getQualifiedXdsUri(xdsServerUri string) string {
+	if strings.HasPrefix(xdsServerUri, "dns:///") {
+		return xdsServerUri
+	}
+	return "dns:///" + xdsServerUri
+}
+
 type config struct {
 	XdsServers                                []server                             `json:"xds_servers,omitempty"`
 	Authorities                               map[string]Authority                 `json:"authorities,omitempty"`
 	Node                                      *node                                `json:"node,omitempty"`
 	CertificateProviders                      map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
+	AllowedGrpcServices                       map[string]allowedGrpcServiceConfig  `json:"allowed_grpc_services,omitempty"`
 	ServerListenerResourceNameTemplate        string                               `json:"server_listener_resource_name_template,omitempty"`
 	ClientDefaultListenerResourceNameTemplate string                               `json:"client_default_listener_resource_name_template,omitempty"`
 }
@@ -527,4 +548,8 @@ type privateSPIFFEConfig struct {
 	PrivateKeyFile    string `json:"private_key_file,omitempty"`
 	CACertificateFile string `json:"ca_certificate_file,omitempty"`
 	RefreshInterval   string `json:"refresh_interval,omitempty"`
+}
+
+type allowedGrpcServiceConfig struct {
+	ChannelCreds []creds `json:"channel_creds,omitempty"`
 }

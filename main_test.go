@@ -579,6 +579,88 @@ func TestGenerate(t *testing.T) {
   "client_default_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/thedefault/%s"
 }`,
 		},
+		{
+			desc: "happy path for allowed_grpc_services",
+			input: configInput{
+				xdsServerUri:               "example.com:443",
+				gcpProjectNumber:           123456789012345,
+				vpcNetworkName:             "thedefault",
+				ip:                         "10.9.8.7",
+				zone:                       "uscentral-5",
+				gitCommitHash:              "7202b7c611ebd6d382b7b0240f50e9824200bffd",
+				includeAllowedGrpcServices: true,
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "example.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "authorities": {
+    "traffic-director-c2p.xds.googleapis.com": {
+      "xds_servers": [
+        {
+          "server_uri": "dns:///directpath-pa.googleapis.com",
+          "channel_creds": [
+            {
+              "type": "google_default"
+            }
+          ],
+          "server_features": [
+            "xds_v3",
+            "ignore_resource_deletion"
+          ]
+        }
+      ],
+      "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+    },
+    "traffic-director-global.xds.googleapis.com": {
+      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/thedefault/%s"
+    }
+  },
+  "node": {
+    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd"
+    },
+    "locality": {
+      "zone": "uscentral-5"
+    }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "certificates.pem",
+        "private_key_file": "private_key.pem",
+        "ca_certificate_file": "ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  },
+  "allowed_grpc_services": {
+    "dns:///example.com:443": {
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ]
+    }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s",
+  "client_default_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/thedefault/%s"
+}`,
+		},
 	}
 
 	for _, test := range tests {
@@ -781,5 +863,23 @@ func overrideHTTP(s *httptest.Server) {
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			return (&net.Dialer{}).DialContext(ctx, "tcp", s.Listener.Addr().String())
 		},
+	}
+}
+
+func Test_getQualifiedXdsUri(t *testing.T) {
+	tests := []struct {
+		name         string
+		xdsServerUri string
+		want         string
+	}{
+		{"append when missing dns:", "example.com:123", "dns:///example.com:123"},
+		{"as is when contains dns:", "dns:///example.com:123", "dns:///example.com:123"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getQualifiedXdsUri(tt.xdsServerUri); got != tt.want {
+				t.Errorf("getQualifiedXdsUri() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
