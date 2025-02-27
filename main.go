@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Binary main generates the xDS bootstrap configuration necessary for gRPC
+// applications to connect to and use Traffic Director as their xDS control
+// plane.
 package main
 
 import (
@@ -26,7 +29,6 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -37,7 +39,7 @@ import (
 )
 
 var (
-	xdsServerUri               = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
+	xdsServerURI               = flag.String("xds-server-uri", "trafficdirector.googleapis.com:443", "override of server uri, for testing")
 	outputName                 = flag.String("output", "-", "output file name")
 	gcpProjectNumber           = flag.Int64("gcp-project-number", 0, "the gcp project number. If unknown, can be found via 'gcloud projects list'")
 	vpcNetworkName             = flag.String("vpc-network-name", "default", "VPC network name")
@@ -50,7 +52,7 @@ var (
 	gkeLocation                = flag.String("gke-location-experimental", "", "the location (region/zone) of the GKE cluster, instead of retrieving it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	gceVM                      = flag.String("gce-vm-experimental", "", "GCE VM name to use, instead of reading it from the metadata server. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	configMesh                 = flag.String("config-mesh", "", "Dictates which Mesh resource to use.")
-	generateMeshId             = flag.Bool("generate-mesh-id", false, "When enabled, the CSM MeshID is generated. If config-mesh flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location and gke-cluster-name flags respectively.")
+	generateMeshID             = flag.Bool("generate-mesh-id", false, "When enabled, the CSM MeshID is generated. If config-mesh flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location and gke-cluster-name flags respectively.")
 	includeAllowedGrpcServices = flag.Bool("include-allowed-grpc-services-experimental", false, "When enabled, generates `allowed_grpc_services` map that includes current xDS Server URI. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 	isTrustedXdsServer         = flag.Bool("is-trusted-xds-server-experimental", false, "Whether to include the server feature trusted_xds_server for TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
@@ -80,14 +82,14 @@ func main() {
 
 	if *gcpProjectNumber == 0 {
 		var err error
-		*gcpProjectNumber, err = getProjectId()
+		*gcpProjectNumber, err = getProjectID()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to determine project id: %s\n", err)
 			os.Exit(1)
 		}
 	}
 
-	ip, err := getHostIp()
+	ip, err := getHostIP()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to determine host's ip: %s\n", err)
 	}
@@ -152,9 +154,9 @@ func main() {
 		}
 	}
 
-	meshId := *configMesh
-	if *generateMeshId {
-		if meshId != "" {
+	meshID := *configMesh
+	if *generateMeshID {
+		if meshID != "" {
 			fmt.Fprint(os.Stderr, "Error: --config-mesh flag cannot be specified while --generate-mesh-id is also set.\n")
 			os.Exit(1)
 		}
@@ -181,17 +183,17 @@ func main() {
 			ClusterName: cluster,
 			Location:    clusterLocality,
 		}
-		meshId = meshNamer.GenerateMeshId()
+		meshID = meshNamer.GenerateMeshId()
 	}
 
-	gitCommitHash, err := getGitCommitId()
+	gitCommitHash, err := getCommitID()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: unable to determine git commit ID: %s\n", err)
 		os.Exit(1)
 	}
 
 	input := configInput{
-		xdsServerUri:               *xdsServerUri,
+		xdsServerURI:               *xdsServerURI,
 		gcpProjectNumber:           *gcpProjectNumber,
 		vpcNetworkName:             *vpcNetworkName,
 		ip:                         ip,
@@ -200,7 +202,7 @@ func main() {
 		secretsDir:                 *secretsDir,
 		metadataLabels:             nodeMetadata,
 		deploymentInfo:             deploymentInfo,
-		configMesh:                 meshId,
+		configMesh:                 meshID,
 		ipv6Capable:                isIPv6Capable(),
 		gitCommitHash:              gitCommitHash,
 		isTrustedXdsServer:         *isTrustedXdsServer,
@@ -245,7 +247,7 @@ func main() {
 }
 
 type configInput struct {
-	xdsServerUri               string
+	xdsServerURI               string
 	gcpProjectNumber           int64
 	vpcNetworkName             string
 	ip                         string
@@ -272,7 +274,7 @@ func validate(in configInput) error {
 
 func generate(in configInput) ([]byte, error) {
 	xdsServer := server{
-		ServerUri:    in.xdsServerUri,
+		ServerURI:    in.xdsServerURI,
 		ChannelCreds: []creds{{Type: "google_default"}},
 	}
 
@@ -293,14 +295,14 @@ func generate(in configInput) ([]byte, error) {
 	}
 
 	c := &config{
-		XdsServers: []server{xdsServer},
+		XDSServers: []server{xdsServer},
 		Node: &node{
-			Id:      fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, networkIdentifier, uuid.New().String()),
+			ID:      fmt.Sprintf("projects/%d/networks/%s/nodes/%s", in.gcpProjectNumber, networkIdentifier, uuid.New().String()),
 			Cluster: "cluster", // unused by TD
 			Locality: &locality{
 				Zone: in.zone,
 			},
-			Metadata: map[string]interface{}{
+			Metadata: map[string]any{
 				"INSTANCE_IP": in.ip,
 				"TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": in.gitCommitHash,
 			},
@@ -314,8 +316,8 @@ func generate(in configInput) ([]byte, error) {
 			c2pAuthority: {
 				// In the case of DirectPath, it is safe to assume that the operator is notified of missing resources.
 				// In other words, "ignore_resource_deletion" server_features is always set.
-				XdsServers: []server{{
-					ServerUri:      "dns:///directpath-pa.googleapis.com",
+				XDSServers: []server{{
+					ServerURI:      "dns:///directpath-pa.googleapis.com",
 					ChannelCreds:   []creds{{Type: "google_default"}},
 					ServerFeatures: []string{"xds_v3", "ignore_resource_deletion"},
 				}},
@@ -347,7 +349,7 @@ func generate(in configInput) ([]byte, error) {
 	// For Rate Limiting
 	if in.includeAllowedGrpcServices {
 		c.AllowedGrpcServices = map[string]allowedGrpcServiceConfig{
-			getQualifiedXdsUri(in.xdsServerUri): {
+			getQualifiedXDSURI(in.xdsServerURI): {
 				ChannelCreds: []creds{{Type: "google_default"}},
 			},
 		}
@@ -365,20 +367,7 @@ func generate(in configInput) ([]byte, error) {
 	return json.MarshalIndent(c, "", "  ")
 }
 
-func getGitCommitId() (string, error) {
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return "", fmt.Errorf("error calling debug.ReadBuildInfo")
-	}
-	for _, setting := range info.Settings {
-		if setting.Key == "vcs.revision" {
-			return setting.Value, nil
-		}
-	}
-	return "", fmt.Errorf("BuildInfo.Settings is missing vcs.revision")
-}
-
-func getHostIp() (string, error) {
+func getHostIP() (string, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return "", err
@@ -405,16 +394,16 @@ func getZone() (string, error) {
 	return string(qualifiedZone[i+1:]), nil
 }
 
-func getProjectId() (int64, error) {
-	projectIdBytes, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/project/numeric-project-id")
+func getProjectID() (int64, error) {
+	projectIDBytes, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/project/numeric-project-id")
 	if err != nil {
 		return 0, fmt.Errorf("could not discover project id: %w", err)
 	}
-	projectId, err := strconv.ParseInt(string(projectIdBytes), 10, 64)
+	projectID, err := strconv.ParseInt(string(projectIDBytes), 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("could not parse project id from metadata server: %w", err)
 	}
-	return projectId, nil
+	return projectID, nil
 }
 
 func getClusterName() (string, error) {
@@ -458,7 +447,7 @@ func isIPv6Capable() bool {
 }
 
 func getFromMetadata(urlStr string) ([]byte, error) {
-	parsedUrl, err := url.Parse(urlStr)
+	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +456,7 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 	}
 	req := &http.Request{
 		Method: "GET",
-		URL:    parsedUrl,
+		URL:    parsedURL,
 		Header: http.Header{
 			"Metadata-Flavor": {"Google"},
 		},
@@ -482,20 +471,20 @@ func getFromMetadata(urlStr string) ([]byte, error) {
 		return nil, fmt.Errorf("failed reading from metadata server: %w", err)
 	}
 	if code := resp.StatusCode; code < 200 || code > 299 {
-		return nil, fmt.Errorf("metadata server returned status code %d for url %q", code, parsedUrl)
+		return nil, fmt.Errorf("metadata server returned status code %d for url %q", code, parsedURL)
 	}
 	return body, nil
 }
 
-func getQualifiedXdsUri(xdsServerUri string) string {
-	if strings.HasPrefix(xdsServerUri, "dns:///") {
-		return xdsServerUri
+func getQualifiedXDSURI(serverURI string) string {
+	if strings.HasPrefix(serverURI, "dns:///") {
+		return serverURI
 	}
-	return "dns:///" + xdsServerUri
+	return "dns:///" + serverURI
 }
 
 type config struct {
-	XdsServers                                []server                             `json:"xds_servers,omitempty"`
+	XDSServers                                []server                             `json:"xds_servers,omitempty"`
 	Authorities                               map[string]Authority                 `json:"authorities,omitempty"`
 	Node                                      *node                                `json:"node,omitempty"`
 	CertificateProviders                      map[string]certificateProviderConfig `json:"certificate_providers,omitempty"`
@@ -505,7 +494,7 @@ type config struct {
 }
 
 type server struct {
-	ServerUri      string   `json:"server_uri,omitempty"`
+	ServerURI      string   `json:"server_uri,omitempty"`
 	ChannelCreds   []creds  `json:"channel_creds,omitempty"`
 	ServerFeatures []string `json:"server_features,omitempty"`
 }
@@ -515,21 +504,21 @@ type server struct {
 // For more details, see:
 // https://github.com/grpc/proposal/blob/master/A47-xds-federation.md#bootstrap-config-changes
 type Authority struct {
-	XdsServers                         []server `json:"xds_servers,omitempty"`
+	XDSServers                         []server `json:"xds_servers,omitempty"`
 	ClientListenerResourceNameTemplate string   `json:"client_listener_resource_name_template,omitempty"`
 }
 
 type creds struct {
-	Type   string      `json:"type,omitempty"`
-	Config interface{} `json:"config,omitempty"`
+	Type   string `json:"type,omitempty"`
+	Config any    `json:"config,omitempty"`
 }
 
 type node struct {
-	Id           string                 `json:"id,omitempty"`
-	Cluster      string                 `json:"cluster,omitempty"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
-	Locality     *locality              `json:"locality,omitempty"`
-	BuildVersion string                 `json:"build_version,omitempty"`
+	ID           string         `json:"id,omitempty"`
+	Cluster      string         `json:"cluster,omitempty"`
+	Metadata     map[string]any `json:"metadata,omitempty"`
+	Locality     *locality      `json:"locality,omitempty"`
+	BuildVersion string         `json:"build_version,omitempty"`
 }
 
 type locality struct {
@@ -539,8 +528,8 @@ type locality struct {
 }
 
 type certificateProviderConfig struct {
-	PluginName string      `json:"plugin_name,omitempty"`
-	Config     interface{} `json:"config,omitempty"`
+	PluginName string `json:"plugin_name,omitempty"`
+	Config     any    `json:"config,omitempty"`
 }
 
 type privateSPIFFEConfig struct {

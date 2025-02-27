@@ -20,25 +20,12 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 )
-
-func TestGetGitCommitId(t *testing.T) {
-	commitId, err := getGitCommitId()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	re := regexp.MustCompile(`^[a-f0-9]{40}$`)
-	if !re.MatchString(commitId) {
-		t.Fatalf("getGitCommitId(): returned an invalid commit ID: %q. Want commit ID to be a valid SHA1 hash.", commitId)
-	}
-}
 
 func TestValidate(t *testing.T) {
 	tests := []struct {
@@ -49,7 +36,7 @@ func TestValidate(t *testing.T) {
 		{
 			desc: "fails when config-mesh has too many characters",
 			input: configInput{
-				xdsServerUri:     "example.com:443",
+				xdsServerURI:     "example.com:443",
 				gcpProjectNumber: 123456789012345,
 				vpcNetworkName:   "thedefault",
 				ip:               "10.9.8.7",
@@ -62,7 +49,7 @@ func TestValidate(t *testing.T) {
 		{
 			desc: "fails when config-mesh does not start with an alphabetic letter",
 			input: configInput{
-				xdsServerUri:     "example.com:443",
+				xdsServerURI:     "example.com:443",
 				gcpProjectNumber: 123456789012345,
 				vpcNetworkName:   "thedefault",
 				ip:               "10.9.8.7",
@@ -75,7 +62,7 @@ func TestValidate(t *testing.T) {
 		{
 			desc: "fails when config-mesh contains characters besides letters, numbers, and hyphens.",
 			input: configInput{
-				xdsServerUri:     "example.com:443",
+				xdsServerURI:     "example.com:443",
 				gcpProjectNumber: 123456789012345,
 				vpcNetworkName:   "thedefault",
 				ip:               "10.9.8.7",
@@ -106,7 +93,7 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case with v3 config by default",
 			input: configInput{
-				xdsServerUri:     "example.com:443",
+				xdsServerURI:     "example.com:443",
 				gcpProjectNumber: 123456789012345,
 				vpcNetworkName:   "thedefault",
 				ip:               "10.9.8.7",
@@ -181,7 +168,7 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "Server feature for Trusted xds server",
 			input: configInput{
-				xdsServerUri:       "example.com:443",
+				xdsServerURI:       "example.com:443",
 				gcpProjectNumber:   123456789012345,
 				vpcNetworkName:     "thedefault",
 				ip:                 "10.9.8.7",
@@ -258,7 +245,7 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case with security config",
 			input: configInput{
-				xdsServerUri:     "example.com:443",
+				xdsServerURI:     "example.com:443",
 				gcpProjectNumber: 123456789012345,
 				vpcNetworkName:   "thedefault",
 				ip:               "10.9.8.7",
@@ -331,7 +318,7 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy case with deployment info",
 			input: configInput{
-				xdsServerUri:     "example.com:443",
+				xdsServerURI:     "example.com:443",
 				gcpProjectNumber: 123456789012345,
 				vpcNetworkName:   "thedefault",
 				ip:               "10.9.8.7",
@@ -419,7 +406,7 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "configMesh specified",
 			input: configInput{
-				xdsServerUri:     "example.com:443",
+				xdsServerURI:     "example.com:443",
 				gcpProjectNumber: 123456789012345,
 				vpcNetworkName:   "thedefault",
 				ip:               "10.9.8.7",
@@ -508,7 +495,7 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "ignore_resource_deletion and v3",
 			input: configInput{
-				xdsServerUri:           "example.com:443",
+				xdsServerURI:           "example.com:443",
 				gcpProjectNumber:       123456789012345,
 				vpcNetworkName:         "thedefault",
 				ip:                     "10.9.8.7",
@@ -582,7 +569,7 @@ func TestGenerate(t *testing.T) {
 		{
 			desc: "happy path for allowed_grpc_services",
 			input: configInput{
-				xdsServerUri:               "example.com:443",
+				xdsServerURI:               "example.com:443",
 				gcpProjectNumber:           123456789012345,
 				vpcNetworkName:             "thedefault",
 				ip:                         "10.9.8.7",
@@ -713,7 +700,7 @@ func TestGetProjectId(t *testing.T) {
 			}
 			w.Write([]byte("123456789012345"))
 		})
-	got, err := getProjectId()
+	got, err := getProjectID()
 	if err != nil {
 		t.Fatalf("want no error, got :%v", err)
 	}
@@ -868,7 +855,7 @@ func overrideHTTP(s *httptest.Server) {
 func Test_getQualifiedXdsUri(t *testing.T) {
 	tests := []struct {
 		name         string
-		xdsServerUri string
+		xdsServerURI string
 		want         string
 	}{
 		{"append when missing dns:", "example.com:123", "dns:///example.com:123"},
@@ -876,7 +863,7 @@ func Test_getQualifiedXdsUri(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getQualifiedXdsUri(tt.xdsServerUri); got != tt.want {
+			if got := getQualifiedXDSURI(tt.xdsServerURI); got != tt.want {
 				t.Errorf("getQualifiedXdsUri() = %v, want %v", got, tt.want)
 			}
 		})
