@@ -20,6 +20,6 @@ for more details.
 ## Running unit tests
 
 To run unit tests, run the following command:
-```
+```shell
 go test ./... -buildvcs=true
 ```

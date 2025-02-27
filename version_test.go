@@ -20,13 +20,13 @@ import (
 )
 
 func TestGetCommitId(t *testing.T) {
-	commitId, err := getCommitID()
+	commitID, err := getCommitID()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	re := regexp.MustCompile(`^[a-f0-9]{40}$`)
-	if !re.MatchString(commitId) {
-		t.Fatalf("getCommitId(): returned an invalid commit ID: %q. Want commit ID to be a valid SHA1 hash.", commitId)
+	if !re.MatchString(commitID) {
+		t.Fatalf("getCommitId(): returned an invalid commit ID: %q. Want commit ID to be a valid SHA1 hash.", commitID)
 	}
 }

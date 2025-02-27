@@ -54,7 +54,7 @@ var (
 	configMesh                 = flag.String("config-mesh", "", "Dictates which Mesh resource to use.")
 	generateMeshID             = flag.Bool("generate-mesh-id", false, "When enabled, the CSM MeshID is generated. If config-mesh flag is specified, this flag would be ignored. Location and Cluster Name would be retrieved from the metadata server unless specified via gke-location and gke-cluster-name flags respectively.")
 	includeAllowedGrpcServices = flag.Bool("include-allowed-grpc-services-experimental", false, "When enabled, generates `allowed_grpc_services` map that includes current xDS Server URI. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
-	isTrustedXdsServer         = flag.Bool("is-trusted-xds-server-experimental", false, "Whether to include the server feature trusted_xds_server for TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
+	isTrustedXDSServer         = flag.Bool("is-trusted-xds-server-experimental", false, "Whether to include the server feature trusted_xds_server for TD. This flag is EXPERIMENTAL and may be changed or removed in a later release.")
 )
 
 const (
@@ -91,7 +91,7 @@ func main() {
 
 	ip, err := getHostIP()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to determine host's ip: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Warning: failed to determine host's IP: %s\n", err)
 	}
 
 	// Retrieve zone from the metadata server only if not specified in args.
@@ -205,7 +205,7 @@ func main() {
 		configMesh:                 meshID,
 		ipv6Capable:                isIPv6Capable(),
 		gitCommitHash:              gitCommitHash,
-		isTrustedXdsServer:         *isTrustedXdsServer,
+		isTrustedXDSServer:         *isTrustedXDSServer,
 		includeAllowedGrpcServices: *includeAllowedGrpcServices,
 	}
 
@@ -259,7 +259,7 @@ type configInput struct {
 	configMesh                 string
 	ipv6Capable                bool
 	gitCommitHash              string
-	isTrustedXdsServer         bool
+	isTrustedXDSServer         bool
 	includeAllowedGrpcServices bool
 }
 
@@ -280,7 +280,7 @@ func generate(in configInput) ([]byte, error) {
 
 	// Set xds_v3.
 	xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "xds_v3")
-	if in.isTrustedXdsServer {
+	if in.isTrustedXDSServer {
 		xdsServer.ServerFeatures = append(xdsServer.ServerFeatures, "trusted_xds_server")
 	}
 

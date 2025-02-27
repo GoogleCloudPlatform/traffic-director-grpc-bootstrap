@@ -175,7 +175,7 @@ func TestGenerate(t *testing.T) {
 				zone:               "uscentral-5",
 				metadataLabels:     map[string]string{"k1": "v1", "k2": "v2"},
 				gitCommitHash:      "7202b7c611ebd6d382b7b0240f50e9824200bffd",
-				isTrustedXdsServer: true,
+				isTrustedXDSServer: true,
 			},
 			wantOutput: `{
   "xds_servers": [
