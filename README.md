@@ -16,3 +16,10 @@ gcr.io/trafficdirector-prod/td-grpc-bootstrap
 
 Please refer to the [GKE setup guide](https://cloud.google.com/traffic-director/docs/set-up-proxyless-gke)
 for more details.
+
+## Running unit tests
+
+To run unit tests, run the following command:
+```shell
+go test ./... -buildvcs=true
+```

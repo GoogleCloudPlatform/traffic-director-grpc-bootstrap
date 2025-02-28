@@ -33,14 +33,14 @@ const (
 // http://metadata.google.internal and uses a response header with key "Server"
 // to determine the deployment type.
 func getDeploymentType() (deploymentType, error) {
-	parsedUrl, err := url.Parse("http://metadata.google.internal")
+	parsedURL, err := url.Parse("http://metadata.google.internal")
 	if err != nil {
 		return deploymentTypeUnknown, err
 	}
 	client := &http.Client{Timeout: 5 * time.Second}
 	req := &http.Request{
 		Method: "GET",
-		URL:    parsedUrl,
+		URL:    parsedURL,
 		Header: http.Header{"Metadata-Flavor": {"Google"}},
 	}
 	resp, err := client.Do(req)
