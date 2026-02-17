@@ -752,7 +752,7 @@ func TestGenerate(t *testing.T) {
 				gcpProjectNumber: 123456789012345,
 				vpcNetworkName:   "thedefault",
 				ip:               "10.9.8.7",
-				region:           "us-central1",
+				zone:           "us-central1-a",
 				deploymentInfo: map[string]string{
 					"INSTANCE-ID": "instance-id-123",
 				},
@@ -805,7 +805,7 @@ func TestGenerate(t *testing.T) {
       }
     },
     "locality": {
-      "region": "us-central1"
+      "zone": "us-central1-a"
     }
   },
   "certificate_providers": {
