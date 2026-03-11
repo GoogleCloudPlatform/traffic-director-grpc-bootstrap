@@ -156,7 +156,7 @@ func main() {
 	case deploymentTypeCloudRun:
 		instanceID, err := getCloudRunInstanceID()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %s\n", err)
+			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 			os.Exit(1)
 		} else {
 			deploymentInfo = map[string]string{
@@ -471,7 +471,7 @@ func getVMName() string {
 func getCloudRunInstanceID() (string, error) {
 	instanceID, err := getFromMetadata("http://metadata.google.internal/computeMetadata/v1/instance/id")
 	if err != nil {
-		return "", fmt.Errorf("failed to determine instance id: %w", err)
+		return "", fmt.Errorf("failed to determine instance id: %v", err)
 	}
 	return string(instanceID), nil
 }

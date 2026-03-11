@@ -745,84 +745,6 @@ func TestGenerate(t *testing.T) {
   "client_default_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/thedefault/%s"
 }`,
 		},
-    {
-			desc: "happy case for Cloud Run deployment",
-			input: configInput{
-				xdsServerURI:     "example.com:443",
-				gcpProjectNumber: 123456789012345,
-				vpcNetworkName:   "thedefault",
-				ip:               "10.9.8.7",
-				zone:           "us-central1-a",
-				deploymentInfo: map[string]string{
-					"INSTANCE-ID": "instance-id-123",
-				},
-				gitCommitHash: "7202b7c611ebd6d382b7b0240f50e9824200bffd",
-			},
-			wantOutput: `{
-  "xds_servers": [
-    {
-      "server_uri": "example.com:443",
-      "channel_creds": [
-        {
-          "type": "google_default"
-        }
-      ],
-      "server_features": [
-        "xds_v3"
-      ]
-    }
-  ],
-  "authorities": {
-    "traffic-director-c2p.xds.googleapis.com": {
-      "xds_servers": [
-        {
-          "server_uri": "dns:///directpath-pa.googleapis.com",
-          "channel_creds": [
-            {
-              "type": "google_default"
-            }
-          ],
-          "server_features": [
-            "xds_v3",
-            "ignore_resource_deletion"
-          ]
-        }
-      ],
-      "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
-    },
-    "traffic-director-global.xds.googleapis.com": {
-      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/thedefault/%s"
-    }
-  },
-  "node": {
-    "id": "projects/123456789012345/networks/thedefault/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
-    "cluster": "cluster",
-    "metadata": {
-      "INSTANCE_IP": "10.9.8.7",
-      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "7202b7c611ebd6d382b7b0240f50e9824200bffd",
-      "TRAFFIC_DIRECTOR_CLIENT_ENVIRONMENT": {
-        "INSTANCE-ID": "instance-id-123"
-      }
-    },
-    "locality": {
-      "zone": "us-central1-a"
-    }
-  },
-  "certificate_providers": {
-    "google_cloud_private_spiffe": {
-      "plugin_name": "file_watcher",
-      "config": {
-        "certificate_file": "certificates.pem",
-        "private_key_file": "private_key.pem",
-        "ca_certificate_file": "ca_certificates.pem",
-        "refresh_interval": "600s"
-      }
-    }
-  },
-  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s",
-  "client_default_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123456789012345/thedefault/%s"
-}`,
-		},
 	}
 
 	for _, test := range tests {
@@ -954,6 +876,52 @@ func TestGetClusterLocality(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Fatalf("getClusterLocality() = %s want: %s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetCloudRunInstanceID(t *testing.T) {
+	tests := []struct {
+		desc    string
+		handler func(http.ResponseWriter, *http.Request)
+		want    string
+		wantErr bool
+	}{
+		{
+			desc: "success",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Metadata-Flavor") != "Google" {
+					http.Error(w, "Missing Metadata-Flavor", http.StatusForbidden)
+					return
+				}
+				w.Write([]byte("instance-id-123"))
+			},
+			want: "instance-id-123",
+		},
+		{
+			desc: "no_response_from_server",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				http.Error(w, "Error", http.StatusForbidden)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			mux := http.NewServeMux()
+			mux.HandleFunc("metadata.google.internal/computeMetadata/v1/instance/id", tt.handler)
+			server := httptest.NewServer(mux)
+			defer server.Close()
+			overrideHTTP(server)
+
+			got, err := getCloudRunInstanceID()
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("getCloudRunInstanceID() returned error: %v wantErr: %v", err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Fatalf("getCloudRunInstanceID() = %s want: %s", got, tt.want)
 			}
 		})
 	}
