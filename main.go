@@ -156,7 +156,7 @@ func main() {
 	case deploymentTypeCloudRun:
 		instanceID, err := getCloudRunInstanceID()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			fmt.Fprintf(os.Stderr, "Error generating Cloud Run deployment info: %s\n", err)
 			os.Exit(1)
 		} else {
 			deploymentInfo = map[string]string{

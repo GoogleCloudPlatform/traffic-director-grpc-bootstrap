@@ -900,7 +900,7 @@ func TestGetCloudRunInstanceID(t *testing.T) {
 			want: "instance-id-123",
 		},
 		{
-			desc: "no_response_from_server",
+			desc: "server_returns_403",
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Error", http.StatusForbidden)
 			},
