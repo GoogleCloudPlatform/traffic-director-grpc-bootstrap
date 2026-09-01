@@ -13,11 +13,9 @@ jobs:
     timeout-minutes: 10
     strategy:
       fail-fast: false
-      matrix:
-        work-dir: ['.']
     steps:
       - name: Run govulncheck
         uses: golang/govulncheck-action@v1
         with:
           check-latest: true
-          work-dir: ${{ matrix.work-dir }}
+          work-dir: ['.']
