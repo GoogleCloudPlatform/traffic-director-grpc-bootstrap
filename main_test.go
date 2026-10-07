@@ -263,6 +263,95 @@ func TestGenerate(t *testing.T) {
 }`,
 		},
 		{
+			desc: "happy case with staging regional config setup",
+			input: configInput{
+				xdsServerURI:     "staging-trafficdirector.antarctica-central1.rep.sandbox.googleapis.com:443",
+				gcpProjectNumber: 123,
+				vpcNetworkName:   "test",
+				ip:               "10.9.8.7",
+				zone:             "antarctica-central1",
+				gitCommitHash:    "12345",
+				xdsServerRegion:  "antarctica-central1",
+			},
+			wantOutput: `{
+  "xds_servers": [
+    {
+      "server_uri": "staging-trafficdirector.antarctica-central1.rep.sandbox.googleapis.com:443",
+      "channel_creds": [
+        {
+          "type": "google_default"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "authorities": {
+    "traffic-director-c2p.xds.googleapis.com": {
+      "xds_servers": [
+        {
+          "server_uri": "dns:///directpath-pa.googleapis.com",
+          "channel_creds": [
+            {
+              "type": "google_default"
+            }
+          ],
+          "server_features": [
+            "xds_v3",
+            "ignore_resource_deletion"
+          ]
+        }
+      ],
+      "client_listener_resource_name_template": "xdstp://traffic-director-c2p.xds.googleapis.com/envoy.config.listener.v3.Listener/%s"
+    },
+    "traffic-director-global.xds.googleapis.com": {
+      "client_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123/test/%s"
+    },
+    "traffic-director.antarctica-central1.xds.googleapis.com": {
+      "xds_servers": [
+        {
+          "server_uri": "staging-trafficdirector.antarctica-central1.rep.sandbox.googleapis.com:443",
+          "channel_creds": [
+            {
+              "type": "google_default"
+            }
+          ],
+          "server_features": [
+            "xds_v3"
+          ]
+        }
+      ],
+      "client_listener_resource_name_template": "xdstp://traffic-director.antarctica-central1.xds.googleapis.com/envoy.config.listener.v3.Listener/123/test/%s"
+    }
+  },
+  "node": {
+    "id": "projects/123/networks/test/nodes/52fdfc07-2182-454f-963f-5f0f9a621d72",
+    "cluster": "cluster",
+    "metadata": {
+      "INSTANCE_IP": "10.9.8.7",
+      "TRAFFICDIRECTOR_GRPC_BOOTSTRAP_GENERATOR_SHA": "12345"
+    },
+    "locality": {
+      "zone": "antarctica-central1"
+    }
+  },
+  "certificate_providers": {
+    "google_cloud_private_spiffe": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "certificates.pem",
+        "private_key_file": "private_key.pem",
+        "ca_certificate_file": "ca_certificates.pem",
+        "refresh_interval": "600s"
+      }
+    }
+  },
+  "server_listener_resource_name_template": "grpc/server?xds.resource.listening_address=%s",
+  "client_default_listener_resource_name_template": "xdstp://traffic-director-global.xds.googleapis.com/envoy.config.listener.v3.Listener/123/test/%s"
+}`,
+		},
+		{
 			desc: "Server feature for Trusted xds server",
 			input: configInput{
 				xdsServerURI:       "example.com:443",

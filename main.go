@@ -350,7 +350,9 @@ func generate(in configInput) ([]byte, error) {
 	if in.xdsServerRegion != "" {
 		regionalTdAuthority := fmt.Sprintf("traffic-director.%s.xds.googleapis.com", in.xdsServerRegion)
 		regionalXdsServer := xdsServer
-		regionalXdsServer.ServerURI = fmt.Sprintf("trafficdirector.%s.rep.googleapis.com:443", in.xdsServerRegion)
+		if !strings.Contains(regionalXdsServer.ServerURI, in.xdsServerRegion) {
+			regionalXdsServer.ServerURI = fmt.Sprintf("trafficdirector.%s.rep.googleapis.com:443", in.xdsServerRegion)
+		}
 
 		c.Authorities[regionalTdAuthority] = Authority{
 			XDSServers: []server{regionalXdsServer},
